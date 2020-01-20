@@ -56,11 +56,11 @@ public class ConvCbl {
 	}
 
 	private void exec(String fileName) throws IOException {
-		CblSource cblSource = new CblSource(fileName);
-		cblSource.read();
-		cblSource.analyze();
+		CblProgram program = new CblProgram(fileName);
+		program.read();
+		program.analyze();
 
-		System.out.println(cblSource.getStat());
+		System.out.println(program.getStat());
 	}
 
 	private static void setParams(CommandLine cmd) {

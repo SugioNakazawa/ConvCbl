@@ -52,8 +52,28 @@ public class ConvCblTest {
 	 * Test method for {@link com.hoge.ConvCbl#main(java.lang.String[])}.
 	 */
 	@Test
-	public void testMain() {
+	public void testMain01() {
 		String[] args = { "-i", "src/test/resources/com/hoge/convcbl/sample01.cbl" };
+		try {
+			ConvCbl.main(args);
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail();
+		}
+	}
+	@Test
+	public void testMain02() {
+		String[] args = { "-i", "src/test/resources/com/hoge/convcbl/sample02.cbl" };
+		try {
+			ConvCbl.main(args);
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail();
+		}
+	}
+	@Test
+	public void testMain03() {
+		String[] args = { "-i", "src/test/resources/com/hoge/convcbl/sample03.cbl" };
 		try {
 			ConvCbl.main(args);
 		} catch (Exception e) {
