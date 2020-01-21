@@ -11,6 +11,13 @@ import javax.activation.UnsupportedDataTypeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * DATA DIVISION 内容を保持。
+ * COBOLソースコードから生成。
+ * Asakusa DMDL を生成。
+ * @author nakazawasugio
+ *
+ */
 public class DataDiv extends BaseDiv {
 	private static Logger logger = LoggerFactory.getLogger(DataDiv.class.getName());
 	private static final String KEY_DIVISION = "DIVISION";
@@ -118,6 +125,11 @@ public class DataDiv extends BaseDiv {
 				logger.debug("\t" + col.colName + " : " + col.colType);
 			}
 		}
+	}
+	
+	public void createDmdl(String fileName) {
+//		AsakusaDmdl dmdl = new AsakusaDmdl();
+		
 	}
 
 	public abstract class BaseSec {

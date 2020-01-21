@@ -1,0 +1,11 @@
+"説明)"
+@namespace(value = file)
+@directio.csv(charset = "UTF-8")
+sample = {
+    "マスター更新区分"
+    column_status : TEXT;
+
+    "名称"
+    column_name : TEXT;
+
+}
