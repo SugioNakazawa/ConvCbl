@@ -25,21 +25,24 @@ public class CblSource {
 			// コメント行以外の8カラム以降（A領域）を対象
 			if (rec.length() > 7 && !"*".equals(rec.subSequence(6, 7)) && !"/".equals(rec.subSequence(6, 7))) {
 				if (rec.endsWith(".")) {
+					//	最後のピリオドは外す。
+					while (rec.endsWith(".")) {
+						rec = rec.substring(0, rec.length() - 1);
+					}
 					String target = "";
 					if (recBuff.length() > 0) {
-						target = recBuff + " " + rec.substring(7).trim();
+						target = recBuff.trim() + " " + rec.substring(7).trim();
 						recBuff = "";
 					} else {
 						target = rec.substring(7).trim();
 					}
-//					logger.debug(target);
-					String[] cols = target.split(" ");
+					String[] cols = target.split(" +");
 					if (cols.length > 0) {
 						recList.add(cols);
 					}
 				} else {
 					// 次の行へ継続
-					recBuff = rec.substring(7).trim();
+					recBuff += " " +rec.substring(7).trim();
 				}
 			}
 		}

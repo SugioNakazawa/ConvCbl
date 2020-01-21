@@ -31,7 +31,7 @@ public class CblProgram {
 	private String fileName;
 	private IdentificationDiv idDiv;
 	private EnvironmentDiv envDiv;
-	private DataDiv dataDiv;
+	DataDiv dataDiv;
 	private ProcedureDiv procDiv;
 
 	public CblProgram(String fileName) {
@@ -71,7 +71,7 @@ public class CblProgram {
 			if (cols.length > 0) {
 				if (cols.length > 1) {
 					// check DIVISION
-					if ("DIVISION.".equals(cols[1])) {
+					if ("DIVISION".equals(cols[1])) {
 						if ("IDENTIFICATION".equals(cols[0])) {
 							saveDiv = idDiv;
 						} else if ("ENVIRONMENT".equals(cols[0])) {

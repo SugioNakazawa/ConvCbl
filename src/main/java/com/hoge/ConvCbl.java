@@ -22,7 +22,7 @@ public class ConvCbl {
 	static Logger logger = LoggerFactory.getLogger(ConvCbl.class.getName());
 	static String MSG_NO_FILE_PARAM = "入力ファイルが指定されていません。";
 	static String MSG_NO_FILE = "指定ファイルが存在しません。";
-
+	CblProgram program;
 	/**
 	 * @param arg
 	 * @throws IOException
@@ -55,12 +55,16 @@ public class ConvCbl {
 		}
 	}
 
-	private void exec(String fileName) throws IOException {
-		CblProgram program = new CblProgram(fileName);
+	void exec(String fileName) throws IOException {
+		program = new CblProgram(fileName);
 		program.read();
 		program.analyze();
-
+		System.out.println("================================================================================");
 		System.out.println(program.getStat());
+	}
+
+	public CblProgram getProgram() {
+		return program;
 	}
 
 	private static void setParams(CommandLine cmd) {
