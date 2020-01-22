@@ -21,7 +21,7 @@ public class CblSource {
 		String recBuff = "";
 		for (String rec : recListAll) {
 			// 全角スペースを半角スペースへ
-			rec = rec.replaceAll("　", " ");
+			rec = rec.replaceAll("　", " ").trim();
 			// コメント行以外の8カラム以降（A領域）を対象
 			if (rec.length() > 7 && !"*".equals(rec.subSequence(6, 7)) && !"/".equals(rec.subSequence(6, 7))) {
 				if (rec.endsWith(".")) {
@@ -32,7 +32,6 @@ public class CblSource {
 					String target = "";
 					if (recBuff.length() > 0) {
 						target = recBuff.trim() + " " + rec.substring(7).trim();
-						recBuff = "";
 					} else {
 						target = rec.substring(7).trim();
 					}
@@ -40,6 +39,7 @@ public class CblSource {
 					if (cols.length > 0) {
 						recList.add(cols);
 					}
+					recBuff = "";
 				} else {
 					// 次の行へ継続
 					recBuff += " " +rec.substring(7).trim();

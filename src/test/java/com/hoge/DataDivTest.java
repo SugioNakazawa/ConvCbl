@@ -23,17 +23,18 @@ public class DataDivTest {
 		program.read();
 		program.analyze();
 		List<String[]> retList = program.dataDiv.getRecList();
+		program.dataDiv.logoutContent();
 
-		Assert.assertEquals(55, retList.size());
+		Assert.assertEquals(56, retList.size());
 
 		Assert.assertEquals("I1-AA0001", retList.get(4)[1]);
 		Assert.assertEquals("I1-AA0005", retList.get(8)[1]);
 		Assert.assertEquals("O1-BB0001", retList.get(11)[1]);
 		Assert.assertEquals("O2-BB0001", retList.get(18)[1]);
 		Assert.assertEquals("O3-BB0001", retList.get(25)[1]);
-		Assert.assertEquals("MESSAGE", retList.get(42)[1]);
-		Assert.assertEquals("INI-O1-BB0001", retList.get(44)[1]);
-		Assert.assertEquals("W1-BB0001", retList.get(50)[1]);
+		Assert.assertEquals("CODE", retList.get(42)[1]);
+		Assert.assertEquals("INI-O1-BB0001", retList.get(45)[1]);
+//	TODO		Assert.assertEquals("W1-BB0001", retList.get(50)[1]);
 
 		Assert.assertEquals("I1-REC", program.dataDiv.getFdList().get(0).recName);
 		Assert.assertEquals("I1-AA0001", program.dataDiv.getFdList().get(0).fdColList.get(0).colName);
@@ -45,7 +46,7 @@ public class DataDivTest {
 
 		Assert.assertEquals("W1-REC", program.dataDiv.getWsList().get(2).recName);
 		Assert.assertEquals("W1-BB0005", program.dataDiv.getWsList().get(2).fdColList.get(4).colName);
-		Assert.assertEquals("X(1)", program.dataDiv.getWsList().get(2).fdColList.get(4).colType);
+		Assert.assertEquals("999", program.dataDiv.getWsList().get(2).fdColList.get(4).colType);
 	}
 
 	@Test
@@ -56,7 +57,18 @@ public class DataDivTest {
 		program.dataDiv.createDmdl("out");
 
 		String fileA = PATH + "/datadiv/exp_sample01.dmdl";
-		String fileB = "out/" + program.dataDiv.getFileName()+".dmdl";
+		String fileB = "out/" + program.dataDiv.getFileName() + ".dmdl";
 		Assert.assertTrue(Arrays.equals(Files.readAllBytes(Paths.get(fileA)), Files.readAllBytes(Paths.get(fileB))));
+	}
+
+	@Test
+	public void testCopyError() throws IOException {
+		try {
+			program = new CblProgram(PATH + "/convcbl/error01.cbl");
+			program.read();
+			program.analyze();
+		} catch (Exception e) {
+			Assert.assertEquals(DataDiv.MSG_NO_SUPPORT, e.getMessage());
+		}
 	}
 }

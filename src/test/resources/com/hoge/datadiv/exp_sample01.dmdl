@@ -15,7 +15,7 @@ I1-REC = {
     I1-AA0004 : TEXT;
 
     "I1-AA0005"
-    I1-AA0005 : TEXT;
+    I1-AA0005 : DECIMAL;
 
 };
 
@@ -36,7 +36,7 @@ O1-REC = {
     O1-BB0004 : TEXT;
 
     "O1-BB0005"
-    O1-BB0005 : TEXT;
+    O1-BB0005 : DECIMAL;
 
 };
 
@@ -57,7 +57,7 @@ O2-REC = {
     O2-BB0004 : TEXT;
 
     "O2-BB0005"
-    O2-BB0005 : TEXT;
+    O2-BB0005 : DECIMAL;
 
 };
 
@@ -78,7 +78,7 @@ O3-REC = {
     O3-BB0004 : TEXT;
 
     "O3-BB0005"
-    O3-BB0005 : TEXT;
+    O3-BB0005 : DECIMAL;
 
 };
 

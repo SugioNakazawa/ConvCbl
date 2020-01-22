@@ -19,6 +19,27 @@ I1-REC = {
 
 };
 
+"I2-REC"
+@namespace(value = file)
+@directio.csv(charset = "UTF-8")
+I2-REC = {
+    "I2-BB0001"
+    I2-BB0001 : TEXT;
+
+    "I2-BB0002"
+    I2-BB0002 : TEXT;
+
+    "I2-BB0003"
+    I2-BB0003 : TEXT;
+
+    "I2-BB0004"
+    I2-BB0004 : TEXT;
+
+    "I2-BB0005"
+    I2-BB0005 : DECIMAL;
+
+};
+
 "O1-REC"
 @namespace(value = file)
 @directio.csv(charset = "UTF-8")
@@ -37,48 +58,6 @@ O1-REC = {
 
     "O1-BB0005"
     O1-BB0005 : DECIMAL;
-
-};
-
-"O2-REC"
-@namespace(value = file)
-@directio.csv(charset = "UTF-8")
-O2-REC = {
-    "O2-BB0001"
-    O2-BB0001 : TEXT;
-
-    "O2-BB0002"
-    O2-BB0002 : TEXT;
-
-    "O2-BB0003"
-    O2-BB0003 : TEXT;
-
-    "O2-BB0004"
-    O2-BB0004 : TEXT;
-
-    "O2-BB0005"
-    O2-BB0005 : DECIMAL;
-
-};
-
-"O3-REC"
-@namespace(value = file)
-@directio.csv(charset = "UTF-8")
-O3-REC = {
-    "O3-BB0001"
-    O3-BB0001 : TEXT;
-
-    "O3-BB0002"
-    O3-BB0002 : TEXT;
-
-    "O3-BB0003"
-    O3-BB0003 : TEXT;
-
-    "O3-BB0004"
-    O3-BB0004 : TEXT;
-
-    "O3-BB0005"
-    O3-BB0005 : DECIMAL;
 
 };
 

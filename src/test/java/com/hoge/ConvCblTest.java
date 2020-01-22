@@ -20,6 +20,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.hoge.ProcedureDiv.ProcSec;
+
 /**
  * @author nakazawasugio
  *
@@ -60,7 +62,7 @@ public class ConvCblTest {
 	 */
 	@Test
 	public void testMain01() {
-		String[] args = { "-i", "src/test/resources/com/hoge/convcbl/sample01.cbl" };
+		String[] args = { "-i", "src/test/resources/com/hoge/convcbl/sample01.cbl", "-o", "out" };
 		try {
 			ConvCbl.main(args);
 		} catch (Exception e) {
@@ -119,25 +121,90 @@ public class ConvCblTest {
 	}
 
 	@Test
-	public void testExec() throws IOException {
+	public void testExec01() throws IOException {
 		String PATH = "src/test/resources/com/hoge/convcbl";
 		String fileName = PATH + "/sample01.cbl";
+		ConvCbl target = new ConvCbl();
 		try {
-			ConvCbl target = new ConvCbl();
 			target.setOutDir("out");
 			target.exec(fileName);
 
 			Assert.assertEquals(2, target.getProgram().idDiv.recList.size());
 			Assert.assertEquals(7, target.getProgram().envDiv.recList.size());
-			Assert.assertEquals(55, target.getProgram().dataDiv.recList.size());
-			Assert.assertEquals(59, target.getProgram().procDiv.recList.size());
+			Assert.assertEquals(56, target.getProgram().dataDiv.recList.size());
+			Assert.assertEquals(61, target.getProgram().procDiv.recList.size());
 		} catch (Exception e) {
 			e.printStackTrace();
 			fail();
 		}
+		// DATA
 		String fileA = PATH + "/exp_sample01.dmdl";
 		String fileB = "out/sample01.dmdl";
 		Assert.assertTrue(Arrays.equals(Files.readAllBytes(Paths.get(fileA)), Files.readAllBytes(Paths.get(fileB))));
+		// PROCEDURE
+		logger.info("===========================================================");
+		target.getProgram().procDiv.logoutContent();
+		logger.info("===========================================================");
+		ProcSec root = target.getProgram().procDiv.secList.get(0);
+		target.getProgram().procDiv.logoutTree(root, "");
+	}
+
+	@Test
+	public void testExec02() throws IOException {
+		String PATH = "src/test/resources/com/hoge/convcbl";
+		String fileName = PATH + "/sample02.cbl";
+		ConvCbl target = new ConvCbl();
+		try {
+			target.setOutDir("out");
+			target.exec(fileName);
+
+			Assert.assertEquals(2, target.getProgram().idDiv.recList.size());
+			Assert.assertEquals(6, target.getProgram().envDiv.recList.size());
+			Assert.assertEquals(44, target.getProgram().dataDiv.recList.size());
+			Assert.assertEquals(62, target.getProgram().procDiv.recList.size());
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail();
+		}
+		// DATA
+		String fileA = PATH + "/exp_sample02.dmdl";
+		String fileB = "out/sample02.dmdl";
+		Assert.assertTrue(Arrays.equals(Files.readAllBytes(Paths.get(fileA)), Files.readAllBytes(Paths.get(fileB))));
+		// PROCEDURE
+		logger.info("===========================================================");
+		target.getProgram().procDiv.logoutContent();
+		logger.info("===========================================================");
+		ProcSec root = target.getProgram().procDiv.secList.get(0);
+		target.getProgram().procDiv.logoutTree(root, "");
+	}
+
+	@Test
+	public void testExec03() throws IOException {
+		String PATH = "src/test/resources/com/hoge/convcbl";
+		String fileName = PATH + "/sample03.cbl";
+		ConvCbl target = new ConvCbl();
+		try {
+			target.setOutDir("out");
+			target.exec(fileName);
+
+			Assert.assertEquals(2, target.getProgram().idDiv.recList.size());
+			Assert.assertEquals(5, target.getProgram().envDiv.recList.size());
+			Assert.assertEquals(65, target.getProgram().dataDiv.recList.size());
+			Assert.assertEquals(73, target.getProgram().procDiv.recList.size());
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail();
+		}
+		// DATA
+		String fileA = PATH + "/exp_sample03.dmdl";
+		String fileB = target.getOutDir() + "/sample03.dmdl";
+		Assert.assertTrue(Arrays.equals(Files.readAllBytes(Paths.get(fileA)), Files.readAllBytes(Paths.get(fileB))));
+		// PROCEDURE
+		logger.info("===========================================================");
+		target.getProgram().procDiv.logoutContent();
+		logger.info("===========================================================");
+		ProcSec root = target.getProgram().procDiv.secList.get(0);
+		target.getProgram().procDiv.logoutTree(root, "");
 	}
 
 }

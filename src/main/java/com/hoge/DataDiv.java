@@ -2,6 +2,7 @@ package com.hoge;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -21,7 +22,10 @@ import com.hoge.AsakusaDmdl.DmdlModel;
  */
 public class DataDiv extends BaseDiv {
 	private static Logger logger = LoggerFactory.getLogger(DataDiv.class.getName());
-	private static final String KEY_SECTION = "SECTION";
+	//	メッセージ
+	static String MSG_NO_SUPPORT = "COPY句ではREPLACING以外はサポートしていません。";
+	static String MSG_NOT_FOUND_COPY = "コピー句 {0} がありません。";
+	//	
 	private static final String KEY_FILE = "FILE";
 	private static final String KEY_FD = "FD";
 	private static final String KEY_WORKING_STORAGE = "WORKING-STORAGE";
@@ -92,9 +96,9 @@ public class DataDiv extends BaseDiv {
 //				logger.debug(String.join(" ", cols));
 				if (Const.KEY_DATA.equals(cols[0]) && Const.KEY_DIVISION.equals(cols[1])) {
 //					logger.debug("found DATA DIVISION");
-				} else if (KEY_FILE.equals(cols[0]) && KEY_SECTION.equals(cols[1])) {
+				} else if (KEY_FILE.equals(cols[0]) && Const.KEY_SECTION.equals(cols[1])) {
 //					logger.debug("found FILE SECTION");
-				} else if (KEY_WORKING_STORAGE.equals(cols[0]) && KEY_SECTION.equals(cols[1])) {
+				} else if (KEY_WORKING_STORAGE.equals(cols[0]) && Const.KEY_SECTION.equals(cols[1])) {
 					inWork = true;
 //					logger.debug("found WORKING-STORAGE SECTION");
 				} else if (KEY_FD.equals(cols[0])) {
@@ -226,11 +230,10 @@ public class DataDiv extends BaseDiv {
 			} else if (KEY_REPLACING.equals(cols[2])) {
 				return replace(retList, cols);
 			}
-			String msg = "COPY句ではREPLACING以外はサポートしていません。";
-			throw new UnsupportedDataTypeException(msg);
+			logger.error(MSG_NO_SUPPORT);
+			throw new RuntimeException(MSG_NO_SUPPORT);
 		} catch (IOException e) {
-			// COPY句が見つからない。
-			String msg = "コピー句 " + cols[1] + " がありません。";
+			String msg = MessageFormat.format(MSG_NOT_FOUND_COPY, cols[1]);
 			logger.error(msg);
 			throw new RuntimeException(msg);
 		}

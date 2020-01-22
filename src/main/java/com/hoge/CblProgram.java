@@ -43,6 +43,7 @@ public class CblProgram {
 		separate();
 		this.idDiv.analyze();
 		this.dataDiv.analyze();
+		this.procDiv.analyze();
 	}
 
 	/**
