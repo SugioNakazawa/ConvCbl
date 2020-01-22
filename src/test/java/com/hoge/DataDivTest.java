@@ -34,7 +34,7 @@ public class DataDivTest {
 		Assert.assertEquals("O3-BB0001", retList.get(25)[1]);
 		Assert.assertEquals("CODE", retList.get(42)[1]);
 		Assert.assertEquals("INI-O1-BB0001", retList.get(45)[1]);
-//	TODO		Assert.assertEquals("W1-BB0001", retList.get(50)[1]);
+		Assert.assertEquals("W1-BB0001", retList.get(51)[1]);
 
 		Assert.assertEquals("I1-REC", program.dataDiv.getFdList().get(0).recName);
 		Assert.assertEquals("I1-AA0001", program.dataDiv.getFdList().get(0).fdColList.get(0).colName);
