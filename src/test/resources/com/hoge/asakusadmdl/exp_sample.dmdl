@@ -1,0 +1,24 @@
+"モデル1"
+@namespace(value = file)
+@directio.csv(charset = "UTF-8")
+model1 = {
+    "キー１"
+    column_key : TEXT;
+
+    "値１"
+    column_value : TEXT;
+
+};
+
+"モデル2"
+@namespace(value = file)
+@directio.csv(charset = "UTF-8")
+model2 = {
+    "キー１"
+    column_key : TEXT;
+
+    "値１"
+    column_value : TEXT;
+
+};
+

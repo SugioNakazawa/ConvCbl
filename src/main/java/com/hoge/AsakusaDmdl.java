@@ -11,97 +11,97 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * AsakusaDMDL
+ * AsakusaDMDL出力。
  * 
  * @author nakazawasugio
  *
  */
 public class AsakusaDmdl {
 	static Logger logger = LoggerFactory.getLogger(AsakusaDmdl.class.getName());
-	/*
-	 * "IF05-07 月間電力量（低圧：HC月間使用量）"
-	 * 
-	 * @namespace(value = file)
-	 * 
-	 * @directio.csv(date = "yyyyMMdd")
-	 */
-	// 定数
-	private static final String FILE_DESC = "\"{0})\"\n";
-	private static final String NAME_SPACE_REC = "@namespace(value = {0})\n";
-	private static final String DIRECTIO_CSV = "@directio.csv(charset = \"{0}\")\n";
-	private static final String SP4 = "    ";
+	static final String MODEL_DESC = "\"{0}\"\n";
+	static final String NAME_SPACE_REC = "@namespace(value = {0})\n";
+	static final String DIRECTIO_CSV = "@directio.csv(charset = \"{0}\")\n";
+	static final String SP4 = "    ";
 
 	/** データモデル名称 **/
-	private String fileDesc;
-	private String namespaceValue;
-	private String charset;
-	private String name;
-	List<AsakusaCol> colList;
+	private String fileName;
+	List<DmdlModel> modelList;
 
-	//	TODO 削除予定。テストケースへ。
-	static public void main(String[] args) throws IOException {
-		AsakusaDmdl obj = new AsakusaDmdl("sample", "file", "UTF-8");
-		obj.setFileDesc("説明");
-		obj.addCol("column_status", "TEXT", "マスター更新区分");
-		obj.addCol("column_name", "TEXT", "名称");
-
-		obj.outputDmdl("sample.dmdl");
+	public AsakusaDmdl(String fileName) {
+		this.fileName = fileName;
+		this.modelList = new ArrayList<DmdlModel>();
 	}
 
-	public AsakusaDmdl(String name, String namespaceValue, String charset) {
-		this.name = name;
-		this.namespaceValue = namespaceValue;
-		this.charset = charset;
-		this.colList = new ArrayList<AsakusaCol>();
+	void addModel(DmdlModel model) {
+		this.modelList.add(model);
 	}
 
-	public void addCol(String name, String type, String desc) {
-		this.colList.add((new AsakusaCol(name, type, desc)));
-	}
-
-	public void outputDmdl(String fileName) throws IOException {
-		File file = new File(fileName);
+	/**
+	 * DMDLファイルの作成。
+	 * 
+	 * @param path 出力するディレクトリ。
+	 * @throws IOException
+	 */
+	public void createDmdl(String path) throws IOException {
+		File file = new File(path + "/" + fileName + ".dmdl");
 		FileWriter fw = new FileWriter(file);
-
-		if (namespaceValue != null) {
-			fw.write(MessageFormat.format(FILE_DESC, fileDesc));
+		for (DmdlModel model : modelList) {
+			fw.write(MessageFormat.format(MODEL_DESC, model.desc));
+			fw.write(MessageFormat.format(NAME_SPACE_REC, model.namespace));
+			fw.write(MessageFormat.format(DIRECTIO_CSV, model.charset));
+			fw.write(model.name + " = {\n"); // name
+			for (DmdlColumn col : model.getColList()) {
+				fw.write(SP4 + "\"" + col.desc + "\"\n");
+				fw.write(SP4 + col.name + " : " + col.type + ";\n\n");
+			}
+			fw.write("};\n\n"); // end-name
 		}
-		fw.write(MessageFormat.format(NAME_SPACE_REC, namespaceValue));
-		fw.write(MessageFormat.format(DIRECTIO_CSV, charset));
-		fw.write(name + " = {\n"); // name
-
-		for (AsakusaCol col : colList) {
-			fw.write(SP4 + "\"" + col.desc + "\"\n");
-			fw.write(SP4 + col.name + " : " + col.type + ";\n\n");
-		}
-
-		fw.write("}\n"); // end-name
 		fw.close();
 		logger.info("created dmdl " + file.getAbsolutePath());
 	}
 
-	public String getFileDesc() {
-		return fileDesc;
+	class DmdlModel {
+		String name;
+		String desc;
+		String namespace;
+		String charset;
+		List<DmdlColumn> colList;
+
+		DmdlModel(String name, String desc, String namespace, String charset) {
+			this.name = name;
+			this.desc = desc;
+			this.namespace = namespace;
+			this.charset = charset;
+			colList = new ArrayList<DmdlColumn>();
+		}
+
+		String getName() {
+			return name;
+		}
+
+		String getNamespaceValue() {
+			return namespace;
+		}
+
+		String getCharset() {
+			return charset;
+		}
+
+		List<DmdlColumn> getColList() {
+			return colList;
+		}
+
+		void addColumn(DmdlColumn col) {
+			this.colList.add(col);
+		}
 	}
 
-	public void setFileDesc(String fileDesc) {
-		this.fileDesc = fileDesc;
-	}
-
-	public String getNamespaceValue() {
-		return namespaceValue;
-	}
-
-	public String getCharset() {
-		return charset;
-	}
-
-	class AsakusaCol {
+	class DmdlColumn {
 		String name;
 		String type;
 		String desc;
 
-		AsakusaCol(String name, String type, String desc) {
+		DmdlColumn(String name, String type, String desc) {
 			this.name = name;
 			this.type = type;
 			this.desc = desc;

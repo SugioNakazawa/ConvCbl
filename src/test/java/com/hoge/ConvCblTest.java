@@ -5,7 +5,11 @@ package com.hoge;
 
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
+import java.nio.file.Paths;
+import java.util.Arrays;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -94,7 +98,7 @@ public class ConvCblTest {
 			ConvCbl.main(args);
 			fail();
 		} catch (IllegalArgumentException e) {
-			Assert.assertEquals(ConvCbl.MSG_NO_FILE_PARAM, e.getMessage());
+			Assert.assertEquals(Const.MSG_NO_FILE_PARAM, e.getMessage());
 		} catch (Exception e) {
 			fail();
 		}
@@ -115,21 +119,25 @@ public class ConvCblTest {
 	}
 
 	@Test
-	public void testExec() {
-		String fileName = "src/test/resources/com/hoge/convcbl/sample01.cbl";
-		String[] expList = { "fileName : src/test/resources/com/hoge/convcbl/sample01.cbl", "ID", "lines 2",
-				"program_id SAMPLE01", "ENV", "lines 7", "DATA", "lines 55", "PROC", "lines 59", "valid lines 99" };
+	public void testExec() throws IOException {
+		String PATH = "src/test/resources/com/hoge/convcbl";
+		String fileName = PATH + "/sample01.cbl";
 		try {
 			ConvCbl target = new ConvCbl();
+			target.setOutDir("out");
 			target.exec(fileName);
-			int i = 0;
-			for (String act : target.getProgram().getStat().split("\n")) {
-				Assert.assertEquals(expList[i++], act);
-			}
+
+			Assert.assertEquals(2, target.getProgram().idDiv.recList.size());
+			Assert.assertEquals(7, target.getProgram().envDiv.recList.size());
+			Assert.assertEquals(55, target.getProgram().dataDiv.recList.size());
+			Assert.assertEquals(59, target.getProgram().procDiv.recList.size());
 		} catch (Exception e) {
 			e.printStackTrace();
 			fail();
 		}
+		String fileA = PATH + "/exp_sample01.dmdl";
+		String fileB = "out/sample01.dmdl";
+		Assert.assertTrue(Arrays.equals(Files.readAllBytes(Paths.get(fileA)), Files.readAllBytes(Paths.get(fileB))));
 	}
 
 }

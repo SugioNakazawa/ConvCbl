@@ -20,23 +20,27 @@ import org.slf4j.LoggerFactory;
  */
 public class ConvCbl {
 	static Logger logger = LoggerFactory.getLogger(ConvCbl.class.getName());
-	static String MSG_NO_FILE_PARAM = "入力ファイルが指定されていません。";
-	static String MSG_NO_FILE = "指定ファイルが存在しません。";
-	CblProgram program;
+	
+	private String inFile;
+	private String outDir;
+	private CblProgram program;
+
 	/**
 	 * @param arg
 	 * @throws IOException
 	 */
 	public static void main(String[] args) throws IOException {
 		Options options = new Options();
-		options.addOption("i", "inputfile", true, "入力ファイル");
+		options.addOption("i", "infile", true, "入力ファイル");
+		options.addOption("o", "outdir", true, "出力ディレクトリ");
 		HelpFormatter hf = new HelpFormatter();
 
 		CommandLineParser parser = new DefaultParser();
 		CommandLine cmd = null;
+		ConvCbl obj = new ConvCbl();
 		try {
 			cmd = parser.parse(options, args);
-			setParams(cmd);
+			obj.setParams(cmd);
 		} catch (ParseException e) {
 			hf.printHelp("[opts]", options);
 			String msg = e.getMessage();
@@ -47,10 +51,9 @@ public class ConvCbl {
 			throw (e);
 		}
 		try {
-			ConvCbl obj = new ConvCbl();
 			obj.exec(cmd.getOptionValues("i")[0]);
 		} catch (IOException e) {
-			logger.error(MSG_NO_FILE);
+			logger.error(Const.MSG_NO_FILE);
 			throw (e);
 		}
 	}
@@ -59,19 +62,40 @@ public class ConvCbl {
 		program = new CblProgram(fileName);
 		program.read();
 		program.analyze();
-		System.out.println("================================================================================");
-		System.out.println(program.getStat());
+		// dmdl出力ディレクトリは入力ソースと同じ。
+		String path = ".";
+		if (fileName.indexOf("/") > 0) {
+			path = fileName.substring(0, fileName.lastIndexOf("/"));
+		}
+		program.dataDiv.createDmdl(outDir);
+		program.logout();
+	}
+
+	public String getOutDir() {
+		return outDir;
+	}
+
+	public void setOutDir(String outDir) {
+		this.outDir = outDir;
 	}
 
 	public CblProgram getProgram() {
 		return program;
 	}
 
-	private static void setParams(CommandLine cmd) {
+	private void setParams(CommandLine cmd) {
 		if (!cmd.hasOption("i")) {
-			logger.error(MSG_NO_FILE_PARAM);
-			throw new IllegalArgumentException(MSG_NO_FILE_PARAM);
+			logger.error(Const.MSG_NO_FILE_PARAM);
+			throw new IllegalArgumentException(Const.MSG_NO_FILE_PARAM);
+		}else {
+			inFile = cmd.getOptionValues("i")[0];
 		}
-		logger.info("入力ファイル[" + String.join(",", cmd.getOptionValues("i")) + "]");
+		if (!cmd.hasOption("o")) {
+			outDir = "out";
+		}else {
+			outDir = cmd.getOptionValues("o")[0];
+		}
+		logger.info("入力ファイル　" + inFile);
+		logger.info("出力ディレクトリ " + outDir);
 	}
 }

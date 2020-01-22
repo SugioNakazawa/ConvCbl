@@ -11,17 +11,16 @@ import javax.activation.UnsupportedDataTypeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.hoge.AsakusaDmdl.DmdlModel;
+
 /**
- * DATA DIVISION 内容を保持。
- * COBOLソースコードから生成。
- * Asakusa DMDL を生成。
+ * DATA DIVISION 内容を保持。 COBOLソースコードから生成。 Asakusa DMDL を生成。
+ * 
  * @author nakazawasugio
  *
  */
 public class DataDiv extends BaseDiv {
 	private static Logger logger = LoggerFactory.getLogger(DataDiv.class.getName());
-	private static final String KEY_DIVISION = "DIVISION";
-	private static final String KEY_DATA = "DATA";
 	private static final String KEY_SECTION = "SECTION";
 	private static final String KEY_FILE = "FILE";
 	private static final String KEY_FD = "FD";
@@ -34,6 +33,7 @@ public class DataDiv extends BaseDiv {
 	private static final String KEY_BY = "BY";
 
 	/** COBOLソースのフルパス **/
+	private String filePath;
 	private String fileName;
 	/** FD SECTION の定義内容 **/
 	private List<FdRec> fdList;
@@ -45,11 +45,21 @@ public class DataDiv extends BaseDiv {
 	 * 
 	 * @param fileName COBOLソースファイルのフルパス。COPY句が同じディレクトrにあると想定。
 	 */
-	public DataDiv(String fileName) {
+	public DataDiv(String filePath) {
 		super();
-		this.fileName = fileName;
+		this.filePath = filePath;
+		String[] filePathSplit = filePath.split("/");
+		String tmp = filePathSplit[filePathSplit.length - 1];
+		if (tmp.indexOf(".") > 0) {
+			tmp = tmp.substring(0, tmp.lastIndexOf("."));
+		}
+		this.fileName = tmp;
 		this.fdList = new ArrayList<FdRec>();
 		this.wsList = new ArrayList<WsRec>();
+	}
+
+	public String getFileName() {
+		return fileName;
 	}
 
 	public List<FdRec> getFdList() {
@@ -80,7 +90,7 @@ public class DataDiv extends BaseDiv {
 			boolean inWork = false;
 			for (String[] cols : recList) {
 //				logger.debug(String.join(" ", cols));
-				if (KEY_DATA.equals(cols[0]) && KEY_DIVISION.equals(cols[1])) {
+				if (Const.KEY_DATA.equals(cols[0]) && Const.KEY_DIVISION.equals(cols[1])) {
 //					logger.debug("found DATA DIVISION");
 				} else if (KEY_FILE.equals(cols[0]) && KEY_SECTION.equals(cols[1])) {
 //					logger.debug("found FILE SECTION");
@@ -126,10 +136,31 @@ public class DataDiv extends BaseDiv {
 			}
 		}
 	}
-	
-	public void createDmdl(String fileName) {
-//		AsakusaDmdl dmdl = new AsakusaDmdl();
-		
+
+	public void createDmdl(String path) throws IOException {
+		AsakusaDmdl target = new AsakusaDmdl(this.fileName);
+		for (FdRec fd : fdList) {
+			DmdlModel model = target.new DmdlModel(fd.recName, fd.recName, "file", "UTF-8");
+			for (FdCol col : fd.getFdColList()) {
+				model.addColumn(target.new DmdlColumn(col.colName, convType(col.colType), col.colName));
+			}
+			target.addModel(model);
+		}
+		target.createDmdl(path);
+	}
+
+	/**
+	 * COBOL変数型からAsakusa型へ変換。
+	 * 
+	 * @param colType
+	 * @return
+	 */
+	private String convType(String colType) {
+		// TODO DATE,DATETIMEは使用できるか。
+		if (colType.startsWith("X")) {
+			return "TEXT";
+		}
+		return "DECIMAL";
 	}
 
 	public abstract class BaseSec {
@@ -187,7 +218,7 @@ public class DataDiv extends BaseDiv {
 	 * @throws IOException
 	 */
 	private List<String[]> doCopy(String[] cols) {
-		File dir = new File(fileName);
+		File dir = new File(filePath);
 		try {
 			List<String[]> retList = CblSource.read(dir.getParent() + "/" + cols[1]);
 			if (cols.length == 2) {

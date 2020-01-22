@@ -15,9 +15,8 @@ public class IdentificationDiv extends BaseDiv {
 		}
 	}
 
-	public String getStat(String title) {
-		StringBuilder sb = new StringBuilder(super.getStat(title));
-		sb.append("program_id " + programId +"\n");
-		return sb.toString();
+	public String getProgramId() {
+		return programId;
 	}
+
 }

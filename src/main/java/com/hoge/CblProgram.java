@@ -1,10 +1,6 @@
 package com.hoge;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,29 +9,16 @@ import org.slf4j.LoggerFactory;
 
 public class CblProgram {
 	static Logger logger = LoggerFactory.getLogger(CblProgram.class.getName());
-	static private String START_IDENTIFICATION = "startIdentification";
-	static private String START_ENVIRONMENT = "startEnvironment";
-	static private String START_DATA = "startData";
-	static private String START_PROCEDURE = "startProcedure";
-	static private String END_IDENTIFICATION = "endIdentification";
-	static private String END_ENVIRONMENT = "endEnvironment";
-	static private String END_DATA = "endData";
-	static private String END_PROCEDURE = "endProcedure";
-	static private String ALL_LINES = "allLines";
-	static private String VALID_LINES = "validLines";
 
-//	Map<String, Object> statMap;
-	private List<String> recListAll;
 	private List<String[]> recList;
 
 	private String fileName;
-	private IdentificationDiv idDiv;
-	private EnvironmentDiv envDiv;
+	IdentificationDiv idDiv;
+	EnvironmentDiv envDiv;
 	DataDiv dataDiv;
-	private ProcedureDiv procDiv;
+	ProcedureDiv procDiv;
 
 	public CblProgram(String fileName) {
-//		statMap = new LinkedHashMap<String, Object>();
 		this.fileName = fileName;
 		recList = new ArrayList<String[]>();
 		idDiv = new IdentificationDiv();
@@ -53,7 +36,7 @@ public class CblProgram {
 
 	public void read() throws IOException {
 		recList = CblSource.read(fileName);
-		logger.debug("read " + recList.size() + " lines");
+		logger.debug("read " + fileName + " " + recList.size() + " lines.");
 	}
 
 	void analyze() {
@@ -72,13 +55,13 @@ public class CblProgram {
 				if (cols.length > 1) {
 					// check DIVISION
 					if ("DIVISION".equals(cols[1])) {
-						if ("IDENTIFICATION".equals(cols[0])) {
+						if (Const.KEY_IDENTIFICATION.equals(cols[0])) {
 							saveDiv = idDiv;
-						} else if ("ENVIRONMENT".equals(cols[0])) {
+						} else if (Const.KEY_ENVIRONMENT.equals(cols[0])) {
 							saveDiv = envDiv;
-						} else if ("DATA".equals(cols[0])) {
+						} else if (Const.KEY_DATA.equals(cols[0])) {
 							saveDiv = dataDiv;
-						} else if ("PROCEDURE".equals(cols[0])) {
+						} else if (Const.KEY_PROCEDURE.equals(cols[0])) {
 							saveDiv = procDiv;
 						}
 					}
@@ -88,18 +71,14 @@ public class CblProgram {
 		}
 	}
 
-	public String getStat() {
-		StringBuilder sb = new StringBuilder();
-		sb.append("fileName : " + fileName + "\n");
+	public void logout() {
+		logger.info("fileName : " + fileName);
 
-		sb.append(idDiv.getStat("ID"));
-		sb.append(envDiv.getStat("ENV"));
-		sb.append(dataDiv.getStat("DATA"));
-		sb.append(procDiv.getStat("PROC"));
+		logger.info(idDiv.getStat(Const.KEY_IDENTIFICATION + " " + Const.KEY_DIVISION));
+		logger.info(envDiv.getStat(Const.KEY_ENVIRONMENT + " " + Const.KEY_DIVISION));
+		logger.info(dataDiv.getStat(Const.KEY_DATA + " " + Const.KEY_DIVISION));
+		logger.info(procDiv.getStat(Const.KEY_PROCEDURE + " " + Const.KEY_DIVISION));
 
-//		sb.append("total lines " + recListAll.size() + "\n");
-		sb.append("valid lines " + recList.size() + "\n");
-
-		return sb.toString();
+		logger.info("valid " + recList.size() + " lines\n");
 	}
 }

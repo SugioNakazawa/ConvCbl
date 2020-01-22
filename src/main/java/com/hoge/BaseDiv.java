@@ -3,6 +3,12 @@ package com.hoge;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 各DIVISIONのベースクラス。
+ * 
+ * @author nakazawasugio
+ *
+ */
 abstract public class BaseDiv {
 	List<String[]> recList;
 
@@ -27,8 +33,6 @@ abstract public class BaseDiv {
 	}
 
 	public String getStat(String title) {
-		StringBuilder sb = new StringBuilder(title + "\n");
-		sb.append("lines " + this.recList.size() + "\n");
-		return sb.toString();
+		return title + " : " + recList.size() + " lines";
 	}
 }
