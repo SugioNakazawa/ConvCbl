@@ -143,10 +143,12 @@ public class ConvCblTest {
 		Assert.assertTrue(Arrays.equals(Files.readAllBytes(Paths.get(fileA)), Files.readAllBytes(Paths.get(fileB))));
 		// PROCEDURE
 		logger.info("===========================================================");
-		target.getProgram().procDiv.logoutContent();
-		logger.info("===========================================================");
-		ProcSec root = target.getProgram().procDiv.secList.get(0);
-		target.getProgram().procDiv.logoutTree(root, "");
+//		target.getProgram().procDiv.logoutContent();
+//		logger.info("===========================================================");
+//		ProcSec root = target.getProgram().procDiv.secList.get(0);
+//		target.getProgram().procDiv.logoutTree(root, "");
+//		logger.info("===========================================================");
+		target.getProgram().procDiv.createCmdTree();
 	}
 
 	@Test
@@ -172,10 +174,11 @@ public class ConvCblTest {
 		Assert.assertTrue(Arrays.equals(Files.readAllBytes(Paths.get(fileA)), Files.readAllBytes(Paths.get(fileB))));
 		// PROCEDURE
 		logger.info("===========================================================");
-		target.getProgram().procDiv.logoutContent();
-		logger.info("===========================================================");
-		ProcSec root = target.getProgram().procDiv.secList.get(0);
-		target.getProgram().procDiv.logoutTree(root, "");
+//		target.getProgram().procDiv.logoutContent();
+//		logger.info("===========================================================");
+//		ProcSec root = target.getProgram().procDiv.secList.get(0);
+//		target.getProgram().procDiv.logoutTree(root, "");
+		target.getProgram().procDiv.createCmdTree();
 	}
 
 	@Test
@@ -201,10 +204,11 @@ public class ConvCblTest {
 		Assert.assertTrue(Arrays.equals(Files.readAllBytes(Paths.get(fileA)), Files.readAllBytes(Paths.get(fileB))));
 		// PROCEDURE
 		logger.info("===========================================================");
-		target.getProgram().procDiv.logoutContent();
-		logger.info("===========================================================");
-		ProcSec root = target.getProgram().procDiv.secList.get(0);
-		target.getProgram().procDiv.logoutTree(root, "");
+//		target.getProgram().procDiv.logoutContent();
+//		logger.info("===========================================================");
+//		ProcSec root = target.getProgram().procDiv.secList.get(0);
+//		target.getProgram().procDiv.logoutTree(root, "");
+		target.getProgram().procDiv.createCmdTree();
 	}
 
 }
