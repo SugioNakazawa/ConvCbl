@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
  */
 public class ConvCblTest {
 	static Logger logger = LoggerFactory.getLogger(ConvCblTest.class.getName());
+	static String PATH = "src/test/resources/com/hoge/convcbl";
 
 	/**
 	 * @throws java.lang.Exception
@@ -120,7 +121,7 @@ public class ConvCblTest {
 
 	@Test
 	public void testExec01() throws IOException {
-		String PATH = "src/test/resources/com/hoge/convcbl";
+		String programId = "sample01";
 		String fileName = PATH + "/sample01.cbl";
 		ConvCbl target = new ConvCbl();
 		try {
@@ -135,32 +136,37 @@ public class ConvCblTest {
 			e.printStackTrace();
 			fail();
 		}
+		checkAndLogout(programId, target);
+	}
+
+	private void checkAndLogout(String programId,ConvCbl target) throws IOException {
 		// DATA
 		{
-			String expFile = PATH + "/exp_sample01.dmdl";
-			String actFile = "out/sample01.dmdl";
+			String expFile = PATH + "/exp_" + programId + ".dmdl";
+			String actFile = "out/" + programId + ".dmdl";
 			Assert.assertTrue(
 					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
 		}
 		// PROCEDURE
-		target.getProgram().procDiv.createCmdTree();
-//		logger.info("===========================================================");
-//		target.getProgram().procDiv.logoutRecList();
-//		logger.info("===========================================================");
-//		target.getProgram().procDiv.logoutSecTree();
-//		logger.info("===========================================================");
-		target.getProgram().procDiv.logoutCmdTree(null);
-		target.getProgram().procDiv.logoutCmdTree("out/sample01_tree.txt");
 		{
-			String expFile = PATH + "/exp_sample01_tree.txt";
-			String actFile = "out/sample01_tree.txt";
+			String expFile = PATH + "/exp_" + programId + "_tree.txt";
+			String actFile = "out/" + programId + "_tree.txt";
 			Assert.assertTrue(
 					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
 		}
+		//	log
+		logger.info("===========================================================");
+		target.getProgram().procDiv.logoutRecList();
+		logger.info("===========================================================");
+		target.getProgram().procDiv.logoutSecTree();
+		logger.info("===========================================================");
+		target.getProgram().procDiv.logoutCmdTree(null);
+		target.getProgram().procDiv.logoutCmdTree("out/" + programId + "_tree.txt");
 	}
 
 	@Test
 	public void testExec02() throws IOException {
+		String programId = "sample02";
 		String PATH = "src/test/resources/com/hoge/convcbl";
 		String fileName = PATH + "/sample02.cbl";
 		ConvCbl target = new ConvCbl();
@@ -176,29 +182,31 @@ public class ConvCblTest {
 			e.printStackTrace();
 			fail();
 		}
-		// DATA
-		String fileA = PATH + "/exp_sample02.dmdl";
-		String fileB = "out/sample02.dmdl";
-		Assert.assertTrue(Arrays.equals(Files.readAllBytes(Paths.get(fileA)), Files.readAllBytes(Paths.get(fileB))));
-		// PROCEDURE
-		logger.info("===========================================================");
-		target.getProgram().procDiv.logoutRecList();
-		logger.info("===========================================================");
-		target.getProgram().procDiv.logoutSecTree();
-		logger.info("===========================================================");
-		target.getProgram().procDiv.createCmdTree();
-		target.getProgram().procDiv.logoutCmdTree(null);
-		target.getProgram().procDiv.logoutCmdTree("out/sample02_tree.txt");
-		{
-			String expFile = PATH + "/exp_sample02_tree.txt";
-			String actFile = "out/sample02_tree.txt";
-			Assert.assertTrue(
-					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
-		}
+		checkAndLogout(programId, target);
+//		// DATA
+//		String fileA = PATH + "/exp_sample02.dmdl";
+//		String fileB = "out/sample02.dmdl";
+//		Assert.assertTrue(Arrays.equals(Files.readAllBytes(Paths.get(fileA)), Files.readAllBytes(Paths.get(fileB))));
+//		// PROCEDURE
+//		logger.info("===========================================================");
+//		target.getProgram().procDiv.logoutRecList();
+//		logger.info("===========================================================");
+//		target.getProgram().procDiv.logoutSecTree();
+//		logger.info("===========================================================");
+////		target.getProgram().procDiv.createCmdTree();
+//		target.getProgram().procDiv.logoutCmdTree(null);
+//		target.getProgram().procDiv.logoutCmdTree("out/sample02_tree.txt");
+//		{
+//			String expFile = PATH + "/exp_sample02_tree.txt";
+//			String actFile = "out/sample02_tree.txt";
+//			Assert.assertTrue(
+//					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
+//		}
 	}
 
 	@Test
 	public void testExec03() throws IOException {
+		String programId = "sample03";
 		String PATH = "src/test/resources/com/hoge/convcbl";
 		String fileName = PATH + "/sample03.cbl";
 		ConvCbl target = new ConvCbl();
@@ -214,25 +222,26 @@ public class ConvCblTest {
 			e.printStackTrace();
 			fail();
 		}
-		// DATA
-		String fileA = PATH + "/exp_sample03.dmdl";
-		String fileB = target.getOutDir() + "/sample03.dmdl";
-		Assert.assertTrue(Arrays.equals(Files.readAllBytes(Paths.get(fileA)), Files.readAllBytes(Paths.get(fileB))));
-		// PROCEDURE
-		logger.info("===========================================================");
-		target.getProgram().procDiv.logoutRecList();
-		logger.info("===========================================================");
-		target.getProgram().procDiv.logoutSecTree();
-		logger.info("===========================================================");
-		target.getProgram().procDiv.createCmdTree();
-		target.getProgram().procDiv.logoutCmdTree(null);
-		target.getProgram().procDiv.logoutCmdTree("out/sample03_tree.txt");
-		{
-			String expFile = PATH + "/exp_sample03_tree.txt";
-			String actFile = "out/sample03_tree.txt";
-			Assert.assertTrue(
-					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
-		}
+		checkAndLogout(programId, target);
+//		// DATA
+//		String fileA = PATH + "/exp_sample03.dmdl";
+//		String fileB = target.getOutDir() + "/sample03.dmdl";
+//		Assert.assertTrue(Arrays.equals(Files.readAllBytes(Paths.get(fileA)), Files.readAllBytes(Paths.get(fileB))));
+//		// PROCEDURE
+//		logger.info("===========================================================");
+//		target.getProgram().procDiv.logoutRecList();
+//		logger.info("===========================================================");
+//		target.getProgram().procDiv.logoutSecTree();
+//		logger.info("===========================================================");
+////		target.getProgram().procDiv.createCmdTree();
+//		target.getProgram().procDiv.logoutCmdTree(null);
+//		target.getProgram().procDiv.logoutCmdTree("out/sample03_tree.txt");
+//		{
+//			String expFile = PATH + "/exp_sample03_tree.txt";
+//			String actFile = "out/sample03_tree.txt";
+//			Assert.assertTrue(
+//					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
+//		}
 	}
 
 }
