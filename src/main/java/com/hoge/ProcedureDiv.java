@@ -37,7 +37,7 @@ public class ProcedureDiv extends BaseDiv {
 	private static final String KEY_UNTIL = "UNTIL";
 	private static final String KEY_VARYONG = "VARYING";
 	private static final String KEY_WHEN = "WHEN";
-	//	メッセージ
+	// メッセージ
 	private static String NOT_FOUND_END_PERFORM = "対応するEND−PERFORMがありません。{0}";
 
 	List<ProcSec> secList;
@@ -229,6 +229,7 @@ public class ProcedureDiv extends BaseDiv {
 			}
 			for (NextCmd next : cmd.nextList) {
 				logoutCmdTree(next.nextCmd, prefix + "\t" + next.condition + "\t", fw);
+//				logoutCmdTree(next.nextCmd, prefix + next.condition + "\t", fw);
 			}
 		}
 	}
@@ -236,8 +237,15 @@ public class ProcedureDiv extends BaseDiv {
 	public void createCmdTree() {
 		String[] sentence = recList.get(0);
 		rootCmd = new ExecCmd(null, sentence);
-		Deque<String[]> locaQ = new ArrayDeque<>();
-		rootCmd.addNextCmd(createCmd(rootCmd, recList.get(1), locaQ), "all");
+		Deque<String[]> localQue = new ArrayDeque<>();
+		// EXIT PROGRAMまでのrecListをQueに登録。
+//		for (String[] rec : recList) {
+//			localQue.addLast(rec);
+//			if ((rec.length > 1) && (KEY_EXIT.equals(rec[0]) && (KEY_PROGRAM.equals(rec[1])))) {
+//				break;
+//			}
+//		}
+		rootCmd.addNextCmd(createCmd(rootCmd, recList.get(1), localQue), "start");
 	}
 
 	/**
@@ -245,70 +253,91 @@ public class ProcedureDiv extends BaseDiv {
 	 * 
 	 * @param prev     呼び出し元Cmd。
 	 * @param sentence 解析する行。複数命令文がある場合あり。
-	 * @param locaQ    Perform戻り場所のスタック。
+	 * @param localQue Perform戻り場所のスタック。
 	 * @return
 	 */
-	private ExecCmd createCmd(ExecCmd prev, String[] sentence, Deque<String[]> locaQ) {
-		logger.debug("in ExecCmd prev, String[] sentence, Deque<String[]> locaQ:"+String.join(" ", sentence));
+	private ExecCmd createCmd(ExecCmd prev, String[] sentence, Deque<String[]> localQue) {
+		logger.debug("in ExecCmd10 sentence:" + String.join(" ", sentence) + " que:" + localQue.size());
 		String[] nextSentence = null;
-		if ((recList.indexOf(sentence) > -1) && (recList.indexOf(sentence) < recList.size())) {
-			if (recList.indexOf(sentence) < recList.size() - 1) {
-				// シーケンス実行時の次の行を事前検索
-				nextSentence = recList.get(recList.indexOf(sentence) + 1);
-			}
+		// 次の行の設定
+		logger.debug("getExecIndex(sentence).size()=" + getExecIndex(sentence).size());
+		if ((getExecIndex(sentence).size() > 1) && (!KEY_READ.equals(sentence[0]))
+				&& (!KEY_EVALUATE.equals(sentence[0]))) {
+			// 行に複数命令がある場合は２番め以降を次へ
+			nextSentence = this.selectArray(sentence, getExecIndex(sentence).get(1));
+			sentence = this.selectArray(sentence, 0, getExecIndex(sentence).get(1));
 		} else {
-			// 存在しない場合は抽出された文。最初に出現する命令文のみにして残りをnextにする。１命令の場合のnextはスタックから取得。
-			if (getExecIndex(sentence).size() == 1) {
-				nextSentence = locaQ.pop();
+			// recListの次の行
+			int next_i = recList.indexOf(sentence);
+			if ((next_i > -1) && (next_i < recList.size() - 1)) {
+				nextSentence = recList.get(next_i + 1);
+				logger.debug("***** check ***** " + String.join(" ", nextSentence));
+				if ((getExecIndex(nextSentence).size() > 1) && (next_i < recList.size() - 2)
+						&& (!KEY_READ.equals(nextSentence[0]))
+						&& (!KEY_EVALUATE.equals(nextSentence[0]))
+						) {
+					// 次の行が複数命令の場合はスタックに積む。（READ以外）
+					localQue.push(recList.get(next_i + 2));
+				}
 			} else {
-				nextSentence = this.selectArray(sentence, getExecIndex(sentence).get(1));
-				sentence = this.selectArray(sentence, 0, getExecIndex(sentence).get(1));
+				if (localQue.isEmpty()) {
+					return new ExecCmd(prev, sentence);
+				}
+				nextSentence = localQue.pop();
+				logger.debug("pop  : " + String.join(" ", nextSentence));
 			}
 		}
+		logger.debug("in ExecCmd21 sentence:" + String.join(" ", sentence) + " que:" + localQue.size());
+		logger.debug("in ExecCmd22 nextSentence:" + String.join(" ", nextSentence) + " que:" + localQue.size());
 		ExecCmd exec = new ExecCmd(prev, sentence);
 		if (KEY_EXIT.equals(sentence[0])) {
-			return doExit(exec, sentence, locaQ, nextSentence);
+			return doExit(exec, sentence, localQue, nextSentence);
 		}
 		// PERFORMジャンプ
 		if (KEY_PERFORM.equals(sentence[0])) {
-			return doPerform(exec, sentence, locaQ, nextSentence);
+			return doPerform(exec, sentence, localQue, nextSentence);
 		}
 		// 分岐コマンド
 		if (KEY_EVALUATE.equals(sentence[0])) {
-			exec = doEvaluate(exec, sentence, locaQ, nextSentence);
+			exec = doEvaluate(exec, sentence, localQue, nextSentence);
 			return exec;
 		}
 		if (KEY_READ.equals(sentence[0])) {
-			return doRead(exec, sentence, locaQ, nextSentence);
+			return doRead(exec, sentence, localQue, nextSentence);
 		}
-		exec.addNextCmd(createCmd(exec, nextSentence, locaQ), "all");
+		exec.addNextCmd(createCmd(exec, nextSentence, localQue), "all");
 		return exec;
 	}
 
 	private ExecCmd doPerform(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence) {
-		logger.debug("inP sentence:"+String.join(" ", sentence));
+		logger.debug("inP sentence:" + String.join(" ", sentence));
+		logger.debug("inP nextSentence:" + String.join(" ", nextSentence));
 		if (searchSec(sentence[1]) != null) {
 			// PERFORNの次がSECTION 次行をスタックへ
 			locaQ.push(nextSentence);
+			logger.debug("push : " + String.join(" ", nextSentence));
 			exec.addNextCmd(createCmd(exec, searchSec(sentence[1]).cols, locaQ), "all");
-		}else {
-			//	PERFORMの次がUNTILの場合。対応するEND-PERFORMまでがnext
-			if(KEY_UNTIL.equals(sentence[1])) {
-				//	END-PERFORMを探す
-				Integer[] endPs = searchCols(sentence,KEY_END_PERFORM);
-				if(endPs.length<1) {
-					throw new RuntimeException(MessageFormat.format(NOT_FOUND_END_PERFORM, String.join(" ", sentence)));
-				}
-				//	UNTIL以降には条件式があるため次の命令を探す。
-				List<Integer> execs = this.getExecIndex(sentence);
-				logger.debug("*this exec*"+String.join(" ", selectArray(sentence,0,execs.get(1))));
-				exec.setSentence(selectArray(sentence,0,execs.get(1)));
-				if(execs.size()>1) {
-					nextSentence = this.selectArray(sentence, execs.get(1), endPs[endPs.length -1]);
-					logger.debug("*next*"+String.join(" ", nextSentence));
-				}
-				exec.addNextCmd(createCmd(exec, nextSentence, locaQ), "all");
-			}
+		} else {
+			exec.addNextCmd(createCmd(exec, nextSentence, locaQ), "all");
+
+//		}else {
+//			//	PERFORMの次がUNTILの場合。対応するEND-PERFORMまでがnext
+//			if(KEY_UNTIL.equals(sentence[1])) {
+//				//	END-PERFORMを探す
+//				Integer[] endPs = searchCols(sentence,KEY_END_PERFORM);
+//				if(endPs.length<1) {
+//					throw new RuntimeException(MessageFormat.format(NOT_FOUND_END_PERFORM, String.join(" ", sentence)));
+//				}
+//				//	UNTIL以降には条件式があるため次の命令を探す。
+//				List<Integer> execs = this.getExecIndex(sentence);
+//				logger.debug("*this exec*"+String.join(" ", selectArray(sentence,0,execs.get(1))));
+//				exec.setSentence(selectArray(sentence,0,execs.get(1)));
+//				if(execs.size()>1) {
+//					nextSentence = this.selectArray(sentence, execs.get(1), endPs[endPs.length -1]);
+//					logger.debug("*next*"+String.join(" ", nextSentence));
+//				}
+//				exec.addNextCmd(createCmd(exec, nextSentence, locaQ), "all");
+//			}
 		}
 		return exec;
 	}
@@ -324,6 +353,7 @@ public class ProcedureDiv extends BaseDiv {
 		}
 		// WHEN分割
 		List<String> cond1 = new ArrayList<String>();
+		locaQ.push(nextSentence);
 		for (int i = 0; i < when_i.length; i++) {
 			String next = "";
 			if (isInt(sentence[when_i[i] + 1]) || KEY_TRUE.equals(sentence[when_i[i] + 1])
@@ -343,7 +373,7 @@ public class ProcedureDiv extends BaseDiv {
 			// next からは次のWHENと同じとなる。
 			if (next != "") {
 //				logger.debug("cond0 = " + cond0 + " cond1 = " + String.join(" OR ", cond1) + " next = " + next);
-				locaQ.push(nextSentence);
+//				locaQ.push(nextSentence);
 				exec.addNextCmd(createCmd(exec, next.split(" "), new ArrayDeque<>(locaQ)), cond0 + " = " + cond1);
 				cond1.clear();
 				;
@@ -353,6 +383,8 @@ public class ProcedureDiv extends BaseDiv {
 	}
 
 	private ExecCmd doRead(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence) {
+		logger.debug("read sentence:" + String.join(" ", sentence));
+		logger.debug("read nextSentence:" + String.join(" ", nextSentence));
 		int end_i = searchCol(sentence, KEY_AT, KEY_END);
 		int notEnd_i = searchCol(sentence, KEY_NOT, KEY_AT, KEY_END);
 		int endRead_i = searchCol(sentence, KEY_END_READ);

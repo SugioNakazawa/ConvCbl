@@ -143,12 +143,12 @@ public class ConvCblTest {
 					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
 		}
 		// PROCEDURE
-		logger.info("===========================================================");
-		target.getProgram().procDiv.logoutRecList();
-		logger.info("===========================================================");
-		target.getProgram().procDiv.logoutSecTree();
-		logger.info("===========================================================");
 		target.getProgram().procDiv.createCmdTree();
+//		logger.info("===========================================================");
+//		target.getProgram().procDiv.logoutRecList();
+//		logger.info("===========================================================");
+//		target.getProgram().procDiv.logoutSecTree();
+//		logger.info("===========================================================");
 		target.getProgram().procDiv.logoutCmdTree(null);
 		target.getProgram().procDiv.logoutCmdTree("out/sample01_tree.txt");
 		{
