@@ -20,8 +20,6 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hoge.ProcedureDiv.ProcSec;
-
 /**
  * @author nakazawasugio
  *
@@ -138,17 +136,27 @@ public class ConvCblTest {
 			fail();
 		}
 		// DATA
-		String fileA = PATH + "/exp_sample01.dmdl";
-		String fileB = "out/sample01.dmdl";
-		Assert.assertTrue(Arrays.equals(Files.readAllBytes(Paths.get(fileA)), Files.readAllBytes(Paths.get(fileB))));
+		{
+			String expFile = PATH + "/exp_sample01.dmdl";
+			String actFile = "out/sample01.dmdl";
+			Assert.assertTrue(
+					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
+		}
 		// PROCEDURE
 		logger.info("===========================================================");
-//		target.getProgram().procDiv.logoutContent();
-//		logger.info("===========================================================");
-//		ProcSec root = target.getProgram().procDiv.secList.get(0);
-//		target.getProgram().procDiv.logoutTree(root, "");
-//		logger.info("===========================================================");
+		target.getProgram().procDiv.logoutRecList();
+		logger.info("===========================================================");
+		target.getProgram().procDiv.logoutSecTree();
+		logger.info("===========================================================");
 		target.getProgram().procDiv.createCmdTree();
+		target.getProgram().procDiv.logoutCmdTree(null);
+		target.getProgram().procDiv.logoutCmdTree("out/sample01_tree.txt");
+		{
+			String expFile = PATH + "/exp_sample01_tree.txt";
+			String actFile = "out/sample01_tree.txt";
+			Assert.assertTrue(
+					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
+		}
 	}
 
 	@Test
@@ -174,11 +182,19 @@ public class ConvCblTest {
 		Assert.assertTrue(Arrays.equals(Files.readAllBytes(Paths.get(fileA)), Files.readAllBytes(Paths.get(fileB))));
 		// PROCEDURE
 		logger.info("===========================================================");
-//		target.getProgram().procDiv.logoutContent();
-//		logger.info("===========================================================");
-//		ProcSec root = target.getProgram().procDiv.secList.get(0);
-//		target.getProgram().procDiv.logoutTree(root, "");
+		target.getProgram().procDiv.logoutRecList();
+		logger.info("===========================================================");
+		target.getProgram().procDiv.logoutSecTree();
+		logger.info("===========================================================");
 		target.getProgram().procDiv.createCmdTree();
+		target.getProgram().procDiv.logoutCmdTree(null);
+		target.getProgram().procDiv.logoutCmdTree("out/sample02_tree.txt");
+		{
+			String expFile = PATH + "/exp_sample02_tree.txt";
+			String actFile = "out/sample02_tree.txt";
+			Assert.assertTrue(
+					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
+		}
 	}
 
 	@Test
@@ -204,11 +220,19 @@ public class ConvCblTest {
 		Assert.assertTrue(Arrays.equals(Files.readAllBytes(Paths.get(fileA)), Files.readAllBytes(Paths.get(fileB))));
 		// PROCEDURE
 		logger.info("===========================================================");
-//		target.getProgram().procDiv.logoutContent();
-//		logger.info("===========================================================");
-//		ProcSec root = target.getProgram().procDiv.secList.get(0);
-//		target.getProgram().procDiv.logoutTree(root, "");
+		target.getProgram().procDiv.logoutRecList();
+		logger.info("===========================================================");
+		target.getProgram().procDiv.logoutSecTree();
+		logger.info("===========================================================");
 		target.getProgram().procDiv.createCmdTree();
+		target.getProgram().procDiv.logoutCmdTree(null);
+		target.getProgram().procDiv.logoutCmdTree("out/sample03_tree.txt");
+		{
+			String expFile = PATH + "/exp_sample03_tree.txt";
+			String actFile = "out/sample03_tree.txt";
+			Assert.assertTrue(
+					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
+		}
 	}
 
 }

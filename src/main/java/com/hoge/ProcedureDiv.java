@@ -1,5 +1,9 @@
 package com.hoge;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -10,17 +14,31 @@ import org.slf4j.LoggerFactory;
 
 public class ProcedureDiv extends BaseDiv {
 	static Logger logger = LoggerFactory.getLogger(ProcedureDiv.class.getName());
-
-	private static final String KEY_EXIT = "EXIT";
+	// 命令文
+	private static final String KEY_EVALUATE = "EVALUATE";
+	private static final String KEY_MOVE = "MOVE";
 	private static final String KEY_PERFORM = "PERFORM";
-
-	private static final String KEY_VARYONG = "VARYING";
-
-	private static final String KEY_UNTIL = "UNTIL";
-
 	private static final String KEY_READ = "READ";
-
 	private static final String KEY_WRITE = "WRITE";
+	/** １行に記述できる命令単語の一覧 **/
+	private static String[] EXEC_WORD_LIST = { KEY_EVALUATE, KEY_MOVE, KEY_PERFORM, KEY_READ, KEY_WRITE };
+	// 補助
+	private static final String KEY_AT = "AT";
+	private static final String KEY_END = "END";
+	private static final String KEY_END_EVALUATE = "END-EVALUATE";
+	private static final String KEY_END_PERFORM = "END-PERFORM";
+	private static final String KEY_END_READ = "END-READ";
+	private static final String KEY_EXIT = "EXIT";
+	private static final String KEY_FALSE = "FALSE";
+	private static final String KEY_NOT = "NOT";
+	private static final String KEY_OTHER = "OTHER";
+	private static final String KEY_PROGRAM = "PROGRAM";
+	private static final String KEY_TRUE = "TRUE";
+	private static final String KEY_UNTIL = "UNTIL";
+	private static final String KEY_VARYONG = "VARYING";
+	private static final String KEY_WHEN = "WHEN";
+	//	メッセージ
+	private static String NOT_FOUND_END_PERFORM = "対応するEND−PERFORMがありません。{0}";
 
 	List<ProcSec> secList;
 	/** CmdTreeのルート **/
@@ -63,10 +81,6 @@ public class ProcedureDiv extends BaseDiv {
 					caller.setWrite(true);
 				}
 			}
-		}
-		// Cmd構成
-		for (String[] cols : recList) {
-
 		}
 	}
 
@@ -139,18 +153,21 @@ public class ProcedureDiv extends BaseDiv {
 	}
 
 	private ProcSec searchSec(String secName) {
-		int counter = 0;
 		for (ProcSec sec : secList) {
-			counter++;
 			if (secName.equals(sec.name)) {
 				return sec;
 			}
 		}
 		return null;
-//		throw new RuntimeException("List<ProcSec> secList 異常 count " + counter + " " + secName);
 	}
 
-	public void logoutContent() {
+	public void logoutRecList() {
+		for (String[] sentence : recList) {
+			logger.info(String.join(" ", sentence));
+		}
+	}
+
+	public void logoutSecTree() {
 		for (ProcSec sec : secList) {
 			logger.info("SECTION : " + sec.name);
 			for (ProcSec called : sec.callSecList) {
@@ -174,17 +191,44 @@ public class ProcedureDiv extends BaseDiv {
 		}
 	}
 
-	private void logoutCmdTree(ExecCmd cmd, String prefix) {
+	/**
+	 * CMDツリーを出力。
+	 * 
+	 * @param filePath ファイルパス。nullの場合はINFOログとして出力。
+	 * @throws IOException
+	 */
+	public void logoutCmdTree(String filePath) throws IOException {
+		FileWriter fw = null;
+		if (filePath != null) {
+			File file = new File(filePath);
+			fw = new FileWriter(file);
+		}
+		logoutCmdTree(rootCmd, "", fw);
+		if (fw != null) {
+			fw.close();
+		}
+	}
+
+	private void logoutCmdTree(ExecCmd cmd, String prefix, FileWriter fw) throws IOException {
 		String data = String.join(" ", cmd.execSentence);
-		logger.info("data " + prefix + data);
+		if (fw == null) {
+			logger.info(prefix + data);
+		} else {
+			fw.write(prefix + data + "\n");
+		}
 		if (cmd.nextList.size() < 1) {
 			return;
 		} else if (cmd.nextList.size() == 1) {
-			logoutCmdTree(cmd.nextList.get(0).nextCmd, prefix);
+			logoutCmdTree(cmd.nextList.get(0).nextCmd, prefix, fw);
 		} else {
-			logger.debug("cmd.nextList.size()=" + cmd.nextList.size());
+			if (fw == null) {
+				logger.debug("*** branch " + cmd.nextList.size() + " ***");
+			} else {
+				fw.write("*** branch " + cmd.nextList.size() + " ***" + "\n");
+
+			}
 			for (NextCmd next : cmd.nextList) {
-				logoutCmdTree(next.nextCmd, prefix + "\t" + next.condition + "\t");
+				logoutCmdTree(next.nextCmd, prefix + "\t" + next.condition + "\t", fw);
 			}
 		}
 	}
@@ -194,87 +238,126 @@ public class ProcedureDiv extends BaseDiv {
 		rootCmd = new ExecCmd(null, sentence);
 		Deque<String[]> locaQ = new ArrayDeque<>();
 		rootCmd.addNextCmd(createCmd(rootCmd, recList.get(1), locaQ), "all");
-		// 表示
-//		logoutCmdTree(rootCmd, "");
 	}
 
+	/**
+	 * ExecCmdを生成。次のCmdも追加し完了した状態とする。
+	 * 
+	 * @param prev     呼び出し元Cmd。
+	 * @param sentence 解析する行。複数命令文がある場合あり。
+	 * @param locaQ    Perform戻り場所のスタック。
+	 * @return
+	 */
 	private ExecCmd createCmd(ExecCmd prev, String[] sentence, Deque<String[]> locaQ) {
-		ExecCmd exec = new ExecCmd(prev, sentence);
-		// シーケンス実行時の次の行を事前検索
+		logger.debug("in ExecCmd prev, String[] sentence, Deque<String[]> locaQ:"+String.join(" ", sentence));
 		String[] nextSentence = null;
-		if ((recList.indexOf(sentence) > -1) && (recList.indexOf(sentence) < recList.size() - 1)) {
-			nextSentence = recList.get(recList.indexOf(sentence) + 1);
-		}
-		if ("EXIT".equals(sentence[0])) {
-			if ((sentence.length > 1) && ("PROGRAM".equals(sentence[1]))) {
-				return exec;
-			} else {
-				// 戻るときの次行はスタックから
-				String[] next = locaQ.pop();
-				exec.addNextCmd(createCmd(exec, next, locaQ), "condition");
-				return exec;
+		if ((recList.indexOf(sentence) > -1) && (recList.indexOf(sentence) < recList.size())) {
+			if (recList.indexOf(sentence) < recList.size() - 1) {
+				// シーケンス実行時の次の行を事前検索
+				nextSentence = recList.get(recList.indexOf(sentence) + 1);
 			}
+		} else {
+			// 存在しない場合は抽出された文。最初に出現する命令文のみにして残りをnextにする。１命令の場合のnextはスタックから取得。
+			if (getExecIndex(sentence).size() == 1) {
+				nextSentence = locaQ.pop();
+			} else {
+				nextSentence = this.selectArray(sentence, getExecIndex(sentence).get(1));
+				sentence = this.selectArray(sentence, 0, getExecIndex(sentence).get(1));
+			}
+		}
+		ExecCmd exec = new ExecCmd(prev, sentence);
+		if (KEY_EXIT.equals(sentence[0])) {
+			return doExit(exec, sentence, locaQ, nextSentence);
 		}
 		// PERFORMジャンプ
 		if (KEY_PERFORM.equals(sentence[0])) {
-			if (searchSec(sentence[1]) != null) {
-				// PERFORNの次がSECTION 次行をスタックへ
-				locaQ.push(nextSentence);
-				exec.addNextCmd(createCmd(exec, searchSec(sentence[1]).cols, locaQ), "condition");
-				return exec;
-			}
+			return doPerform(exec, sentence, locaQ, nextSentence);
 		}
 		// 分岐コマンド
-		if ("EVALUATE".equals(sentence[0])) {
+		if (KEY_EVALUATE.equals(sentence[0])) {
 			exec = doEvaluate(exec, sentence, locaQ, nextSentence);
 			return exec;
 		}
-		if ("READ".equals(sentence[0])) {
-			exec = doRead(exec, sentence, locaQ, nextSentence);
-			return exec;
+		if (KEY_READ.equals(sentence[0])) {
+			return doRead(exec, sentence, locaQ, nextSentence);
 		}
-		// sentenceから次の実行行を決定
-		if ((recList.indexOf(sentence) > -1) && (recList.indexOf(sentence) < recList.size() - 1)) {
-			exec.addNextCmd(createCmd(exec, nextSentence, locaQ), "condition");
+		exec.addNextCmd(createCmd(exec, nextSentence, locaQ), "all");
+		return exec;
+	}
+
+	private ExecCmd doPerform(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence) {
+		logger.debug("inP sentence:"+String.join(" ", sentence));
+		if (searchSec(sentence[1]) != null) {
+			// PERFORNの次がSECTION 次行をスタックへ
+			locaQ.push(nextSentence);
+			exec.addNextCmd(createCmd(exec, searchSec(sentence[1]).cols, locaQ), "all");
+		}else {
+			//	PERFORMの次がUNTILの場合。対応するEND-PERFORMまでがnext
+			if(KEY_UNTIL.equals(sentence[1])) {
+				//	END-PERFORMを探す
+				Integer[] endPs = searchCols(sentence,KEY_END_PERFORM);
+				if(endPs.length<1) {
+					throw new RuntimeException(MessageFormat.format(NOT_FOUND_END_PERFORM, String.join(" ", sentence)));
+				}
+				//	UNTIL以降には条件式があるため次の命令を探す。
+				List<Integer> execs = this.getExecIndex(sentence);
+				logger.debug("*this exec*"+String.join(" ", selectArray(sentence,0,execs.get(1))));
+				exec.setSentence(selectArray(sentence,0,execs.get(1)));
+				if(execs.size()>1) {
+					nextSentence = this.selectArray(sentence, execs.get(1), endPs[endPs.length -1]);
+					logger.debug("*next*"+String.join(" ", nextSentence));
+				}
+				exec.addNextCmd(createCmd(exec, nextSentence, locaQ), "all");
+			}
 		}
 		return exec;
 	}
 
 	private ExecCmd doEvaluate(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence) {
-		Integer[] when_i = searchCols(sentence, "WHEN");
-		int endEvaluate_i = searchCol(sentence, "END-EVALUATE");
+		Integer[] when_i = searchCols(sentence, KEY_WHEN);
+		int endEvaluate_i = searchCol(sentence, KEY_END_EVALUATE);
+		exec.setSentence(selectArray(sentence, 0, 1));
 		// 条件
 		String cond0 = "";
 		for (int i = 1; i < when_i[0]; i++) {
 			cond0 += sentence[i] + " ";
 		}
-		logger.debug("cond0 = " + cond0);
 		// WHEN分割
-		for (int i = 1; i < when_i.length; i++) {
-			String cond1 = "";
-			String cond2 = "";
-			if (isInt(sentence[when_i[i-1] + 1]) || "TRUE".equals(sentence[when_i[i-1] + 1])
-					|| "FALSE".equals(sentence[when_i[i-1] + 1]) || "OTHER".equals(sentence[when_i[i-1] + 1])) {
+		List<String> cond1 = new ArrayList<String>();
+		for (int i = 0; i < when_i.length; i++) {
+			String next = "";
+			if (isInt(sentence[when_i[i] + 1]) || KEY_TRUE.equals(sentence[when_i[i] + 1])
+					|| KEY_FALSE.equals(sentence[when_i[i] + 1]) || KEY_OTHER.equals(sentence[when_i[i] + 1])) {
 				// 定数、BOOLEAN、OTHER
-				cond1 = sentence[when_i[i] + 1];
-				for (int j = when_i[i-1] + 2; j < when_i[i]; j++) {
-					cond2 += sentence[j] + " ";
+				cond1.add(sentence[when_i[i] + 1]);
+				int to_i = i < when_i.length - 1 ? when_i[i + 1] : endEvaluate_i;
+				for (int j = when_i[i] + 2; j < to_i; j++) {
+					next += sentence[j] + " ";
 				}
 			} else {
-				for (int j = when_i[i-1] + 1; j < when_i[i]; j++) {
-					cond1 += sentence[j] + " ";
+				int to_i = i < when_i.length - 1 ? when_i[i + 1] : endEvaluate_i;
+				for (int j = when_i[i] + 1; j < to_i; j++) {
+					cond1.add(sentence[j]);
 				}
 			}
-			logger.debug("cond1 = " + cond1 + " cond2 = " + cond2);
-			cond1 = "";
+			// next からは次のWHENと同じとなる。
+			if (next != "") {
+//				logger.debug("cond0 = " + cond0 + " cond1 = " + String.join(" OR ", cond1) + " next = " + next);
+				locaQ.push(nextSentence);
+				exec.addNextCmd(createCmd(exec, next.split(" "), new ArrayDeque<>(locaQ)), cond0 + " = " + cond1);
+				cond1.clear();
+				;
+			}
 		}
 		return exec;
 	}
 
 	private ExecCmd doRead(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence) {
-		int end_i = searchCol(sentence, "AT", "END");
-		int notEnd_i = searchCol(sentence, "NOT", "AT", "END");
-		int endRead_i = searchCol(sentence, "END-READ");
+		int end_i = searchCol(sentence, KEY_AT, KEY_END);
+		int notEnd_i = searchCol(sentence, KEY_NOT, KEY_AT, KEY_END);
+		int endRead_i = searchCol(sentence, KEY_END_READ);
+		// CMDにセットしたAT END 以降の文を削除
+		exec.setSentence(selectArray(sentence, 0, end_i));
 		{
 			// AT END
 			String[] subSentence = new String[notEnd_i - end_i - 2];
@@ -283,8 +366,8 @@ public class ProcedureDiv extends BaseDiv {
 			}
 //			logger.debug(String.join(" ", subSentence));
 			ExecCmd endCmd = new ExecCmd(exec, subSentence);
-			exec.addNextCmd(endCmd, "AT END");
-			endCmd.addNextCmd(createCmd(endCmd, nextSentence, new ArrayDeque<>(locaQ)), "AT END");
+			exec.addNextCmd(endCmd, KEY_AT + " " + KEY_END);
+			endCmd.addNextCmd(createCmd(endCmd, nextSentence, new ArrayDeque<>(locaQ)), KEY_AT + " " + KEY_END);
 		}
 		{
 			// NOT AT END
@@ -294,10 +377,40 @@ public class ProcedureDiv extends BaseDiv {
 			}
 //			logger.debug(String.join(" ", subSentence));
 			ExecCmd endCmd = new ExecCmd(exec, subSentence);
-			exec.addNextCmd(endCmd, "NOT AT END");
-			endCmd.addNextCmd(createCmd(endCmd, nextSentence, new ArrayDeque<>(locaQ)), "AT END");
+			exec.addNextCmd(endCmd, KEY_NOT + " " + KEY_AT + " " + KEY_END);
+			endCmd.addNextCmd(createCmd(endCmd, nextSentence, new ArrayDeque<>(locaQ)),
+					KEY_NOT + " " + KEY_AT + " " + KEY_END);
 		}
 		return exec;
+	}
+
+	private ExecCmd doExit(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence) {
+		if ((sentence.length > 1) && (KEY_PROGRAM.equals(sentence[1]))) {
+			// プログラム終了。最後のCmd。
+		} else {
+			// 戻るときの次行はスタックから
+			String[] next = locaQ.pop();
+			exec.addNextCmd(createCmd(exec, next, locaQ), "all");
+		}
+		return exec;
+	}
+
+	/**
+	 * 命令予約後の場所を返す。
+	 * 
+	 * @param sentence
+	 * @return
+	 */
+	private List<Integer> getExecIndex(String[] sentence) {
+		List<Integer> ret = new ArrayList<Integer>();
+		for (int i = 0; i < sentence.length; i++) {
+			for (String search : EXEC_WORD_LIST) {
+				if (search.equals(sentence[i])) {
+					ret.add(i);
+				}
+			}
+		}
+		return ret;
 	}
 
 	class ExecCmd {
@@ -311,9 +424,25 @@ public class ProcedureDiv extends BaseDiv {
 			this.execSentence = sentence;
 		}
 
+		public void setSentence(String[] sentence) {
+			this.execSentence = sentence;
+		}
+
 		void addNextCmd(ExecCmd nextCmd, String cond) {
 			this.nextList.add(new NextCmd(nextCmd, cond));
 		}
+	}
+
+	private String[] selectArray(String[] sentence, int start) {
+		return selectArray(sentence, start, sentence.length);
+	}
+
+	private String[] selectArray(String[] sentence, int start, int end) {
+		String[] newSentence = new String[end - start];
+		for (int i = 0; i < newSentence.length; i++) {
+			newSentence[i] = sentence[start + i];
+		}
+		return newSentence;
 	}
 
 	class NextCmd {

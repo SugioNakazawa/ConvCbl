@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory;
  */
 public class ConvCbl {
 	static Logger logger = LoggerFactory.getLogger(ConvCbl.class.getName());
-	
+
 	private String inFile;
 	private String outDir;
 	private CblProgram program;
@@ -62,11 +62,6 @@ public class ConvCbl {
 		program = new CblProgram(fileName);
 		program.read();
 		program.analyze();
-		// dmdl出力ディレクトリは入力ソースと同じ。
-		String path = ".";
-		if (fileName.indexOf("/") > 0) {
-			path = fileName.substring(0, fileName.lastIndexOf("/"));
-		}
 		program.dataDiv.createDmdl(outDir);
 		program.logout();
 	}
@@ -87,12 +82,12 @@ public class ConvCbl {
 		if (!cmd.hasOption("i")) {
 			logger.error(Const.MSG_NO_FILE_PARAM);
 			throw new IllegalArgumentException(Const.MSG_NO_FILE_PARAM);
-		}else {
+		} else {
 			inFile = cmd.getOptionValues("i")[0];
 		}
 		if (!cmd.hasOption("o")) {
 			outDir = "out";
-		}else {
+		} else {
 			outDir = cmd.getOptionValues("o")[0];
 		}
 		logger.info("入力ファイル　" + inFile);
