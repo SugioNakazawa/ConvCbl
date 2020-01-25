@@ -24,12 +24,13 @@ public class ProcedureDiv extends BaseDiv {
 	private static final String KEY_MOVE = "MOVE";
 	private static final String KEY_PERFORM = "PERFORM";
 	private static final String KEY_WRITE = "WRITE";
+	private static final String KEY_END_EVALUATE = "END-EVALUATE";
 	/** 命令単語の一覧 **/
-	private static String[] EXEC_WORD_LIST = { KEY_COMPUTE, KEY_EVALUATE, KEY_MOVE, KEY_PERFORM, KEY_READ, KEY_WRITE };
+	private static String[] EXEC_WORD_LIST = { KEY_COMPUTE, KEY_EVALUATE, KEY_MOVE, KEY_PERFORM, KEY_READ, KEY_WRITE,
+			KEY_END_EVALUATE };
 	// 補助
 	private static final String KEY_AT = "AT";
 	private static final String KEY_END = "END";
-	private static final String KEY_END_EVALUATE = "END-EVALUATE";
 	private static final String KEY_END_PERFORM = "END-PERFORM";
 	private static final String KEY_END_READ = "END-READ";
 	private static final String KEY_EXIT = "EXIT";
@@ -245,7 +246,11 @@ public class ProcedureDiv extends BaseDiv {
 		}
 		// WHEN分割
 		List<String> cond1 = new ArrayList<String>();
+		// EVALUATEの次の文を登録。
 		locaQ.push(nextSentence);
+		// END-EVALUTEを登録。
+		String[] endEva = { "END-EVALUATE" };
+		locaQ.push(endEva);
 		for (int i = 0; i < when_i.length; i++) {
 			String next = "";
 			if (isInt(sentence[when_i[i] + 1]) || KEY_TRUE.equals(sentence[when_i[i] + 1])
