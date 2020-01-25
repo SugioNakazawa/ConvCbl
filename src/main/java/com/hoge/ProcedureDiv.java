@@ -17,9 +17,10 @@ public class ProcedureDiv extends BaseDiv {
 	static boolean DEVIDE_READ = true;
 	// 命令文
 	private static final String KEY_EVALUATE = "EVALUATE";
+	private static final String KEY_IF = "IF";
 	private static final String KEY_READ = "READ";
 	/** 分岐命令 **/
-	private static String[] BRANCH_WORD_LIST = { KEY_EVALUATE, KEY_READ };
+	private static String[] BRANCH_WORD_LIST = { KEY_EVALUATE, KEY_IF, KEY_READ };
 
 	private static final String KEY_COMPUTE = "COMPUTE";
 	private static final String KEY_MOVE = "MOVE";
@@ -27,8 +28,8 @@ public class ProcedureDiv extends BaseDiv {
 	private static final String KEY_WRITE = "WRITE";
 	private static final String KEY_END_EVALUATE = "END-EVALUATE";
 	/** 命令単語の一覧 **/
-	private static String[] EXEC_WORD_LIST = { KEY_COMPUTE, KEY_EVALUATE, KEY_MOVE, KEY_PERFORM, KEY_READ, KEY_WRITE,
-			KEY_END_EVALUATE };
+	private static String[] EXEC_WORD_LIST = { KEY_COMPUTE, KEY_EVALUATE, KEY_IF, KEY_MOVE, KEY_PERFORM, KEY_READ,
+			KEY_WRITE, KEY_END_EVALUATE };
 	// 補助
 	private static final String KEY_AT = "AT";
 	private static final String KEY_END = "END";
