@@ -121,7 +121,8 @@ public class ConvCblTest {
 
 	@Test
 	public void testExec01() throws IOException {
-		ProcedureDiv.LONG_LABEL=false;
+		ProcedureDiv.LONG_LABEL = true;
+		ProcedureDiv.DEVIDE_READ = false;
 		String programId = "sample01";
 		String fileName = PATH + "/sample01.cbl";
 		ConvCbl target = new ConvCbl();
@@ -140,7 +141,7 @@ public class ConvCblTest {
 		checkAndLogout(programId, target);
 	}
 
-	private void checkAndLogout(String programId,ConvCbl target) throws IOException {
+	private void checkAndLogout(String programId, ConvCbl target) throws IOException {
 		// DATA
 		{
 			String expFile = PATH + "/exp_" + programId + ".dmdl";
@@ -155,14 +156,15 @@ public class ConvCblTest {
 			Assert.assertTrue(
 					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
 		}
-		//	log
-//		logger.info("===========================================================");
-//		target.getProgram().procDiv.logoutRecList();
-//		logger.info("===========================================================");
-//		target.getProgram().procDiv.logoutSecTree();
-//		logger.info("===========================================================");
-//		target.getProgram().procDiv.logoutCmdTree(null);
-//		target.getProgram().procDiv.logoutCmdTree("out/" + programId + "_tree.txt");
+		// log
+		logger.info("===========================================================");
+		target.getProgram().procDiv.logoutRecList();
+		logger.info("===========================================================");
+		target.getProgram().procDiv.logoutSecTree();
+		logger.info("===========================================================");
+		target.getProgram().procDiv.logoutCmdTree(null);
+		target.getProgram().procDiv.logoutCmdTree("out/" + programId + "_tree.txt");
+		logger.info("===========================================================");
 		target.getProgram().procDiv.outputDataDot(null);
 		target.getProgram().procDiv.outputDataDot("out/" + programId + ".dot");
 	}

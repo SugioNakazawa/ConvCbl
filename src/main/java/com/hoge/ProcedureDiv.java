@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 public class ProcedureDiv extends BaseDiv {
 	static Logger logger = LoggerFactory.getLogger(ProcedureDiv.class.getName());
 	static boolean LONG_LABEL = true;
+	static boolean DEVIDE_READ = true;
 	// 命令文
 	private static final String KEY_EVALUATE = "EVALUATE";
 	private static final String KEY_READ = "READ";
@@ -278,6 +279,10 @@ public class ProcedureDiv extends BaseDiv {
 	}
 
 	private ExecCmd doRead(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence) {
+		if (!DEVIDE_READ) {
+			exec.addNextCmd(createCmd(exec, nextSentence, locaQ), "all");
+			return exec;
+		}
 		int end_i = searchCol(sentence, KEY_AT, KEY_END);
 		int notEnd_i = searchCol(sentence, KEY_NOT, KEY_AT, KEY_END);
 		int endRead_i = searchCol(sentence, KEY_END_READ);
