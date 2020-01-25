@@ -121,6 +121,7 @@ public class ConvCblTest {
 
 	@Test
 	public void testExec01() throws IOException {
+		ProcedureDiv.LONG_LABEL=false;
 		String programId = "sample01";
 		String fileName = PATH + "/sample01.cbl";
 		ConvCbl target = new ConvCbl();
@@ -155,13 +156,15 @@ public class ConvCblTest {
 					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
 		}
 		//	log
-		logger.info("===========================================================");
-		target.getProgram().procDiv.logoutRecList();
-		logger.info("===========================================================");
-		target.getProgram().procDiv.logoutSecTree();
-		logger.info("===========================================================");
-		target.getProgram().procDiv.logoutCmdTree(null);
-		target.getProgram().procDiv.logoutCmdTree("out/" + programId + "_tree.txt");
+//		logger.info("===========================================================");
+//		target.getProgram().procDiv.logoutRecList();
+//		logger.info("===========================================================");
+//		target.getProgram().procDiv.logoutSecTree();
+//		logger.info("===========================================================");
+//		target.getProgram().procDiv.logoutCmdTree(null);
+//		target.getProgram().procDiv.logoutCmdTree("out/" + programId + "_tree.txt");
+		target.getProgram().procDiv.outputDataDot(null);
+		target.getProgram().procDiv.outputDataDot("out/" + programId + ".dot");
 	}
 
 	@Test

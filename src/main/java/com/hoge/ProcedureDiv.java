@@ -13,14 +13,19 @@ import org.slf4j.LoggerFactory;
 
 public class ProcedureDiv extends BaseDiv {
 	static Logger logger = LoggerFactory.getLogger(ProcedureDiv.class.getName());
+	static boolean LONG_LABEL = true;
 	// 命令文
 	private static final String KEY_EVALUATE = "EVALUATE";
+	private static final String KEY_READ = "READ";
+	/** 分岐命令 **/
+	private static String[] BRANCH_WORD_LIST = { KEY_EVALUATE, KEY_READ };
+
+	private static final String KEY_COMPUTE = "COMPUTE";
 	private static final String KEY_MOVE = "MOVE";
 	private static final String KEY_PERFORM = "PERFORM";
-	private static final String KEY_READ = "READ";
 	private static final String KEY_WRITE = "WRITE";
-	/** １行に記述できる命令単語の一覧 **/
-	private static String[] EXEC_WORD_LIST = { KEY_EVALUATE, KEY_MOVE, KEY_PERFORM, KEY_READ, KEY_WRITE };
+	/** 命令単語の一覧 **/
+	private static String[] EXEC_WORD_LIST = { KEY_COMPUTE, KEY_EVALUATE, KEY_MOVE, KEY_PERFORM, KEY_READ, KEY_WRITE };
 	// 補助
 	private static final String KEY_AT = "AT";
 	private static final String KEY_END = "END";
@@ -76,7 +81,7 @@ public class ProcedureDiv extends BaseDiv {
 		}
 		// コマンドツリー作成
 		{
-			rootCmd = new ExecCmd(null, recList.get(0));
+			rootCmd = new ExecCmd(null, recList.get(0), WordType.LABEL);
 			Deque<String[]> localQue = new ArrayDeque<>();
 			rootCmd.addNextCmd(createCmd(rootCmd, recList.get(1), localQue), "start");
 		}
@@ -326,26 +331,6 @@ public class ProcedureDiv extends BaseDiv {
 		return ret;
 	}
 
-	class ExecCmd {
-		ExecCmd prevCmd;
-		List<NextCmd> nextList;
-		String[] execSentence;
-
-		ExecCmd(ExecCmd prev, String[] sentence) {
-			this.prevCmd = prev;
-			nextList = new ArrayList<NextCmd>();
-			this.execSentence = sentence;
-		}
-
-		public void setSentence(String[] sentence) {
-			this.execSentence = sentence;
-		}
-
-		void addNextCmd(ExecCmd nextCmd, String cond) {
-			this.nextList.add(new NextCmd(nextCmd, cond));
-		}
-	}
-
 	private String[] selectArray(String[] sentence, int start) {
 		return selectArray(sentence, start, sentence.length);
 	}
@@ -389,6 +374,73 @@ public class ProcedureDiv extends BaseDiv {
 	}
 
 	/**
+	 * データフロー出力。Graphvizファイル出力。
+	 * 
+	 * @param filePath ファイルパス。nullのときはINFOログへ出力。
+	 * @throws IOException
+	 */
+	public void outputDataDot(String filePath) throws IOException {
+		FileWriter fw = null;
+		if (filePath != null) {
+			File file = new File(filePath);
+			fw = new FileWriter(file);
+		}
+		writeDot("strict digraph {", fw);
+		{
+			writeDot(addDotNode(this.rootCmd, fw), fw);
+		}
+		writeDot("}\n", fw);
+		if (fw != null) {
+			fw.close();
+		}
+	}
+
+	String addDotNode(ExecCmd cmd, FileWriter fw) throws IOException {
+		// CMDの出力
+		String execStr = cmd.execSentence[0];
+		if (LONG_LABEL) {
+			execStr = String.join(" ", cmd.execSentence);
+			execStr = execStr.replaceAll("\"", "");
+		}
+		writeDot(Integer.toString(cmd.hashCode()) + " [label=\"" + execStr + " " + cmd.type + "\"];", fw);
+		switch (cmd.nextList.size()) {
+		case 0:
+			return Integer.toString(cmd.hashCode());
+		case 1:
+			return Integer.toString(cmd.hashCode()) + " -> " + addDotNode(nextValid(cmd), fw);
+		default:
+			for (NextCmd next : cmd.nextList) {
+				writeDot(cmd.hashCode() + " -> " + nextValid(next.nextCmd).hashCode() + " [label=\"" + next.condition
+						+ "\"]", fw);
+				writeDot(addDotNode(nextValid(next.nextCmd), fw), fw);
+			}
+			return Integer.toString(cmd.hashCode());
+		}
+	}
+
+	private ExecCmd nextValid(ExecCmd cmd) {
+		WordType[] fils = { WordType.BRANCH, WordType.EXEC, WordType.DEFINE };
+		ExecCmd next = cmd.nextList.get(0).nextCmd;
+		while (true) {
+			for (WordType fil : fils) {
+				if (next.type == fil)
+					return next;
+			}
+			if (next.nextList.size() < 1)
+				return next;
+			next = next.nextList.get(0).nextCmd;
+		}
+	}
+
+	private void writeDot(String msg, FileWriter fw) throws IOException {
+		if (fw == null) {
+			logger.info(msg);
+		} else {
+			fw.write(msg + "\n");
+		}
+	}
+
+	/**
 	 * CMDツリーを出力。
 	 *
 	 * @param filePath ファイルパス。nullの場合はINFOログとして出力。
@@ -428,6 +480,57 @@ public class ProcedureDiv extends BaseDiv {
 //				logoutCmdTree(next.nextCmd, prefix + next.condition + "\t", fw);
 			}
 		}
+	}
+
+	class ExecCmd {
+		ExecCmd prevCmd;
+		List<NextCmd> nextList;
+		String[] execSentence;
+		WordType type;
+
+		ExecCmd(ExecCmd prev, String[] sentence) {
+			this.prevCmd = prev;
+			this.nextList = new ArrayList<NextCmd>();
+			this.execSentence = sentence;
+			this.type = convType(sentence);
+		}
+
+		ExecCmd(ExecCmd prev, String[] sentence, WordType type) {
+			this(prev, sentence);
+			this.type = type;
+		}
+
+		private WordType convType(String[] sentence) {
+			if ((sentence == null) || (sentence.length < 1)) {
+				return WordType.OTHER;
+			}
+			for (String key : BRANCH_WORD_LIST) {
+				if (sentence[0].equals(key))
+					return WordType.BRANCH;
+			}
+			for (String key : EXEC_WORD_LIST) {
+				if (sentence[0].equals(key))
+					return WordType.EXEC;
+			}
+			if (sentence.length > 1) {
+				if (Const.KEY_SECTION.equals(sentence[1])) {
+					return WordType.DEFINE;
+				}
+			}
+			return WordType.LABEL;
+		}
+
+		public void setSentence(String[] sentence) {
+			this.execSentence = sentence;
+		}
+
+		void addNextCmd(ExecCmd nextCmd, String cond) {
+			this.nextList.add(new NextCmd(nextCmd, cond));
+		}
+	}
+
+	enum WordType {
+		EXEC, BRANCH, DEFINE, SECTION, LABEL, OTHER
 	}
 
 	class NextCmd {
