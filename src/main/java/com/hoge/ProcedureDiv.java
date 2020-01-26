@@ -15,6 +15,7 @@ public class ProcedureDiv extends BaseDiv {
 	static Logger logger = LoggerFactory.getLogger(ProcedureDiv.class.getName());
 	static boolean LONG_LABEL = true;
 	static boolean DEVIDE_READ = true;
+	static boolean DEVIDE_IF = true;
 	// 命令文
 	private static final String KEY_EVALUATE = "EVALUATE";
 	private static final String KEY_IF = "IF";
@@ -26,15 +27,17 @@ public class ProcedureDiv extends BaseDiv {
 	private static final String KEY_MOVE = "MOVE";
 	private static final String KEY_PERFORM = "PERFORM";
 	private static final String KEY_WRITE = "WRITE";
-	private static final String KEY_END_EVALUATE = "END-EVALUATE";
 	/** 命令単語の一覧 **/
 	private static String[] EXEC_WORD_LIST = { KEY_COMPUTE, KEY_EVALUATE, KEY_IF, KEY_MOVE, KEY_PERFORM, KEY_READ,
-			KEY_WRITE, KEY_END_EVALUATE };
+			KEY_WRITE };
+	private static final String KEY_END_EVALUATE = "END-EVALUATE";
+	private static final String KEY_END_IF = "END-IF";
+	private static final String KEY_END_READ = "END-READ";
+//				, KEY_END_EVALUATE, KEY_END_IF };
 	// 補助
 	private static final String KEY_AT = "AT";
 	private static final String KEY_END = "END";
 	private static final String KEY_END_PERFORM = "END-PERFORM";
-	private static final String KEY_END_READ = "END-READ";
 	private static final String KEY_EXIT = "EXIT";
 	private static final String KEY_FALSE = "FALSE";
 	private static final String KEY_NOT = "NOT";
@@ -44,6 +47,9 @@ public class ProcedureDiv extends BaseDiv {
 	private static final String KEY_UNTIL = "UNTIL";
 	private static final String KEY_VARYONG = "VARYING";
 	private static final String KEY_WHEN = "WHEN";
+	private static final String KEY_THEN = "THEN";
+	private static final String KEY_ELSE = "ELSE";
+	private static final boolean isExpand = false;
 
 	List<ProcSec> secList;
 	/** CmdTreeのルート **/
@@ -180,18 +186,18 @@ public class ProcedureDiv extends BaseDiv {
 		String[] nextSentence = null;
 		// 次の行の設定
 		// getExecIndex(sentence).size());
-		if ((getExecIndex(sentence).size() > 1) && (!KEY_READ.equals(sentence[0]))
+		if ((searchExecIndexList(sentence).size() > 1) && (!KEY_READ.equals(sentence[0]))
 				&& (!KEY_EVALUATE.equals(sentence[0]))) {
 			// 行に複数命令がある場合は２番め以降を次へ
-			nextSentence = this.selectArray(sentence, getExecIndex(sentence).get(1));
-			sentence = this.selectArray(sentence, 0, getExecIndex(sentence).get(1));
+			nextSentence = this.selectArray(sentence, searchExecIndexList(sentence).get(1));
+			sentence = this.selectArray(sentence, 0, searchExecIndexList(sentence).get(1));
 		} else {
 			// recListの次の行
 			int next_i = recList.indexOf(sentence);
 			if ((next_i > -1) && (next_i < recList.size())) {
 				if (next_i < recList.size() - 1) { // 最後の行はEXITのはずなのでここではスキップ。
 					nextSentence = recList.get(next_i + 1);
-					if ((getExecIndex(nextSentence).size() > 1) && (next_i < recList.size() - 2)
+					if ((searchExecIndexList(nextSentence).size() > 1) && (next_i < recList.size() - 2)
 							&& (!KEY_READ.equals(nextSentence[0])) && (!KEY_EVALUATE.equals(nextSentence[0]))) {
 						// 次の行が複数命令の場合はスタックに積む。（READ以外）
 						localQue.push(recList.get(next_i + 2));
@@ -222,6 +228,11 @@ public class ProcedureDiv extends BaseDiv {
 		if (KEY_READ.equals(sentence[0])) {
 			return doRead(exec, sentence, localQue, nextSentence);
 		}
+		if (isExpand) {
+			if (KEY_IF.equals(sentence[0])) {
+				return doIf(exec, sentence, localQue, nextSentence);
+			}
+		}
 		exec.addNextCmd(createCmd(exec, nextSentence, localQue), "all");
 		return exec;
 	}
@@ -235,6 +246,101 @@ public class ProcedureDiv extends BaseDiv {
 			exec.addNextCmd(createCmd(exec, nextSentence, locaQ), "all");
 		}
 		return exec;
+	}
+
+	private ExecCmd doIf(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence) {
+		if (!DEVIDE_IF) {
+			exec.addNextCmd(createCmd(exec, nextSentence, locaQ), "all");
+			return exec;
+		}
+		// then/elseに分割
+		IfCmd ifCmd = devideIfSentence(sentence);
+		return exec;
+	}
+
+	/**
+	 * IF文の分解。
+	 * 
+	 * @param sentence
+	 * @return
+	 */
+	IfCmd devideIfSentence(String[] sentence) {
+		IfCmd ret = new IfCmd(sentence);
+		int then_i = searchCol(sentence, KEY_THEN);
+		int else_i = searchCol(sentence, KEY_ELSE);
+		int endIf_i = searchCol(sentence, KEY_END_IF);
+		int condEnd = 0;
+		int thenStart = 0;
+		int thenEnd = 0;
+		int elseStart = 0;
+		int elseEnd = 0;
+		if (then_i < 0) {
+			if (searchExecIndexList(sentence).size() < 1) {
+				// エラー
+				String msg = "IF文内に実行命令がありません。";
+				throw new RuntimeException(msg);
+			} else {
+				// 最初はIFなので次を取得
+				thenStart = searchExecIndexList(sentence).get(1);
+				if (endIf_i < 0) {
+					thenEnd = sentence.length;
+				} else {
+					thenEnd = endIf_i;
+				}
+			}
+			condEnd = thenStart - 1;
+		} else {
+			thenStart = then_i + 1;
+			condEnd = then_i - 1;
+			if (else_i < 0) {
+				if (endIf_i < 0) {
+					thenEnd = sentence.length;
+				} else {
+					thenEnd = endIf_i;
+				}
+			} else {
+				thenEnd = else_i;
+				elseStart = else_i + 1;
+				if (endIf_i < 0) {
+					elseEnd = sentence.length;
+				} else {
+					elseEnd = endIf_i;
+				}
+			}
+		}
+		ret.thenCond = String.join(" ", selectArray(sentence, 1, condEnd + 1)) + " TRUE";
+		ret.addThen(selectArray(sentence, thenStart, thenEnd));
+
+		if (elseStart > 0) {
+			ret.elseCond = String.join(" ", selectArray(sentence, 1, condEnd + 1)) + " FALSE";
+			ret.addElse(selectArray(sentence, elseStart, elseEnd));
+//			String[] elseStr = new String[elseEnd - elseStart];
+//			elseStr = selectArray(sentence, elseStart, elseEnd);
+//			retList.add(elseStr);
+		}
+		return ret;
+	}
+
+	class IfCmd {
+		String[] orgSentence;
+		String thenCond;
+		List<String[]> thenSentence;
+		String elseCond;
+		List<String[]> elseSentence;
+
+		IfCmd(String[] org) {
+			this.orgSentence = org;
+			thenSentence = new ArrayList<String[]>();
+			elseSentence = new ArrayList<String[]>();
+		}
+
+		public void addThen(String[] thenStr) {
+			this.thenSentence.add(thenStr);
+		}
+
+		public void addElse(String[] elseStr) {
+			this.elseSentence.add(elseStr);
+		}
 	}
 
 	private ExecCmd doEvaluate(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence) {
@@ -330,7 +436,7 @@ public class ProcedureDiv extends BaseDiv {
 	 * @param sentence
 	 * @return
 	 */
-	private List<Integer> getExecIndex(String[] sentence) {
+	private List<Integer> searchExecIndexList(String[] sentence) {
 		List<Integer> ret = new ArrayList<Integer>();
 		for (int i = 0; i < sentence.length; i++) {
 			for (String search : EXEC_WORD_LIST) {
