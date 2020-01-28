@@ -122,7 +122,6 @@ public class ConvCblTest {
 	@Test
 	public void testExec01() throws IOException {
 		ProcedureDiv.LONG_LABEL = true;
-		ProcedureDiv.DEVIDE_READ = true;
 		String programId = "sample01";
 		String fileName = PATH + "/sample01.cbl";
 		ConvCbl target = new ConvCbl();
@@ -138,7 +137,7 @@ public class ConvCblTest {
 			e.printStackTrace();
 			fail();
 		}
-		logout(programId, target);
+		outputLog(programId, target);
 		// DATA CHEK
 		{
 			String expFile = PATH + "/exp_" + programId + ".dmdl";
@@ -156,8 +155,8 @@ public class ConvCblTest {
 	}
 	@Test
 	public void testExec01_longRead_false() throws IOException {
-		ProcedureDiv.LONG_LABEL = false;
-		ProcedureDiv.DEVIDE_READ = false;
+//		ProcedureDiv.LONG_LABEL = false;
+//		ProcedureDiv.DEVIDE_READ = false;
 		String programId = "sample01";
 		String fileName = PATH + "/sample01.cbl";
 		ConvCbl target = new ConvCbl();
@@ -168,7 +167,7 @@ public class ConvCblTest {
 			e.printStackTrace();
 			fail();
 		}
-		logout(programId, target);
+		outputLog(programId, target);
 		// PROCEDURE CHECK
 		{
 			String expFile = PATH + "/exp_" + programId + "_tree_false.txt";
@@ -178,7 +177,7 @@ public class ConvCblTest {
 		}
 	}
 
-	private void logout(String programId, ConvCbl target) throws IOException {
+	private void outputLog(String programId, ConvCbl target) throws IOException {
 		// log
 		logger.info("===========================================================");
 		target.getProgram().procDiv.logoutRecList();
@@ -210,7 +209,7 @@ public class ConvCblTest {
 			e.printStackTrace();
 			fail();
 		}
-		logout(programId, target);
+		outputLog(programId, target);
 		// DATA CHEK
 		{
 			String expFile = PATH + "/exp_" + programId + ".dmdl";
@@ -245,7 +244,7 @@ public class ConvCblTest {
 			e.printStackTrace();
 			fail();
 		}
-		logout(programId, target);
+		outputLog(programId, target);
 		// DATA CHEK
 		{
 			String expFile = PATH + "/exp_" + programId + ".dmdl";

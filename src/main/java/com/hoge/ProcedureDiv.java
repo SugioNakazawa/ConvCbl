@@ -14,8 +14,8 @@ import org.slf4j.LoggerFactory;
 public class ProcedureDiv extends BaseDiv {
 	static Logger logger = LoggerFactory.getLogger(ProcedureDiv.class.getName());
 	static boolean LONG_LABEL = true;
-	static boolean DEVIDE_READ = true;
-	static boolean DEVIDE_IF = true;
+//	static boolean DEVIDE_READ = true;
+//	static boolean DEVIDE_IF = true;
 	// 命令文
 	private static final String KEY_EVALUATE = "EVALUATE";
 	private static final String KEY_IF = "IF";
@@ -92,8 +92,47 @@ public class ProcedureDiv extends BaseDiv {
 		{
 			rootCmd = new ExecCmd(null, recList.get(0), WordType.LABEL);
 			Deque<String[]> localQue = new ArrayDeque<>();
+			// 分岐なしのツリーを作成
 			rootCmd.addNextCmd(createCmd(rootCmd, recList.get(1), localQue), "start");
+			// 分岐を展開
+			expandBranch(rootCmd);
 		}
+	}
+
+	private void expandBranch(ExecCmd cmd) {
+		ExecCmd next = null;
+		while (cmd.nextList.size() > 0) {
+			if (cmd.type == WordType.BRANCH) {
+				ExecCmd endCmd = cmd.nextList.get(0).nextCmd;
+				ExecCmd prevCmd = cmd.prevCmd;
+				cmd = createExpand(cmd);
+				NextCmd repCmd = new NextCmd(cmd,"all");
+				prevCmd.nextList.set(0, repCmd);
+				cmd = endCmd;
+			} else {
+				cmd = cmd.nextList.get(0).nextCmd;
+			}
+		}
+	}
+
+	private ExecCmd createExpand(ExecCmd cmd) {
+		// 分岐の合流ポイント
+		ExecCmd endCmd = cmd.nextList.get(0).nextCmd;
+
+		String[] sentence1 = { "MOVE", "A", "TO", "B" };
+		String[] sentence2 = { "COMPUTE", "C", "TO", "D" };
+		cmd.clearNextCmd();
+
+		ExecCmd b1 = new ExecCmd(cmd, sentence1, WordType.EXEC);
+		b1.addNextCmd(endCmd, "from b1");
+		cmd.addNextCmd(b1, "to b1");
+
+		ExecCmd b2 = new ExecCmd(cmd, sentence2, WordType.EXEC);
+		b2.addNextCmd(endCmd, "from b2");
+		cmd.addNextCmd(b2, "to b2");
+
+//		endCmd.setPrevCmd(b1);
+		return cmd;
 	}
 
 	/**
@@ -221,14 +260,14 @@ public class ProcedureDiv extends BaseDiv {
 			return doPerform(exec, sentence, localQue, nextSentence);
 		}
 		// 分岐コマンド
-		if (KEY_EVALUATE.equals(sentence[0])) {
-			exec = doEvaluate(exec, sentence, localQue, nextSentence);
-			return exec;
-		}
-		if (KEY_READ.equals(sentence[0])) {
-			return doRead(exec, sentence, localQue, nextSentence);
-		}
 		if (isExpand) {
+			if (KEY_EVALUATE.equals(sentence[0])) {
+				exec = doEvaluate(exec, sentence, localQue, nextSentence);
+				return exec;
+			}
+			if (KEY_READ.equals(sentence[0])) {
+				return doRead(exec, sentence, localQue, nextSentence);
+			}
 			if (KEY_IF.equals(sentence[0])) {
 				return doIf(exec, sentence, localQue, nextSentence);
 			}
@@ -249,10 +288,10 @@ public class ProcedureDiv extends BaseDiv {
 	}
 
 	private ExecCmd doIf(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence) {
-		if (!DEVIDE_IF) {
-			exec.addNextCmd(createCmd(exec, nextSentence, locaQ), "all");
-			return exec;
-		}
+//		if (!DEVIDE_IF) {
+//			exec.addNextCmd(createCmd(exec, nextSentence, locaQ), "all");
+//			return exec;
+//		}
 		// then/elseに分割
 		IfCmd ifCmd = devideIfSentence(sentence);
 		return exec;
@@ -386,10 +425,10 @@ public class ProcedureDiv extends BaseDiv {
 	}
 
 	private ExecCmd doRead(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence) {
-		if (!DEVIDE_READ) {
-			exec.addNextCmd(createCmd(exec, nextSentence, locaQ), "all");
-			return exec;
-		}
+//		if (!DEVIDE_READ) {
+//			exec.addNextCmd(createCmd(exec, nextSentence, locaQ), "all");
+//			return exec;
+//		}
 		int end_i = searchCol(sentence, KEY_AT, KEY_END);
 		int notEnd_i = searchCol(sentence, KEY_NOT, KEY_AT, KEY_END);
 		int endRead_i = searchCol(sentence, KEY_END_READ);
@@ -524,7 +563,7 @@ public class ProcedureDiv extends BaseDiv {
 		case 0:
 			return Integer.toString(cmd.hashCode());
 		case 1:
-			return Integer.toString(cmd.hashCode()) + " -> " + addDotNode(nextValid(cmd), fw);
+			return Integer.toString(cmd.hashCode()) + " -> " + addDotNode(nextValid(cmd.nextList.get(0).nextCmd), fw);
 		default:
 			for (NextCmd next : cmd.nextList) {
 				writeDot(cmd.hashCode() + " -> " + nextValid(next.nextCmd).hashCode() + " [label=\"" + next.condition
@@ -536,6 +575,7 @@ public class ProcedureDiv extends BaseDiv {
 	}
 
 	private ExecCmd nextValid(ExecCmd cmd) {
+		if(true)return cmd;	//	全部表示
 		WordType[] fils = { WordType.BRANCH, WordType.EXEC, WordType.DEFINE };
 		ExecCmd next = cmd.nextList.get(0).nextCmd;
 		while (true) {
@@ -612,6 +652,10 @@ public class ProcedureDiv extends BaseDiv {
 			this.type = convType(sentence);
 		}
 
+		public void setPrevCmd(ExecCmd b1) {
+			this.prevCmd = b1;
+		}
+
 		ExecCmd(ExecCmd prev, String[] sentence, WordType type) {
 			this(prev, sentence);
 			this.type = type;
@@ -643,6 +687,10 @@ public class ProcedureDiv extends BaseDiv {
 
 		void addNextCmd(ExecCmd nextCmd, String cond) {
 			this.nextList.add(new NextCmd(nextCmd, cond));
+		}
+
+		void clearNextCmd() {
+			this.nextList.clear();
 		}
 	}
 
