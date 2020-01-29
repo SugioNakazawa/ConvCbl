@@ -153,6 +153,126 @@ public class ProcedureDiv extends BaseDiv {
 		return cmd;
 	}
 
+	/**
+	 * IF文化解析。
+	 * 
+	 * @param sentence
+	 * @return
+	 */
+	BranchCmd expandIf(String[] sentence) {
+		BranchCmd ret = new BranchCmd(sentence);
+		int then_i = searchCol(sentence, KEY_THEN);
+		int else_i = searchCol(sentence, KEY_ELSE);
+		int endIf_i = searchCol(sentence, KEY_END_IF);
+		int condEnd = 0;
+		int thenStart = 0;
+		int thenEnd = 0;
+		int elseStart = 0;
+		int elseEnd = 0;
+		if (then_i < 0) {
+			if (searchExecIndexList(sentence).size() < 1) {
+				// エラー
+				String msg = "IF文内に実行命令がありません。";
+				throw new RuntimeException(msg);
+			} else {
+				// 最初はIFなので次を取得
+				thenStart = searchExecIndexList(sentence).get(1);
+				if (endIf_i < 0) {
+					thenEnd = sentence.length;
+				} else {
+					thenEnd = endIf_i;
+				}
+			}
+			condEnd = thenStart - 1;
+		} else {
+			thenStart = then_i + 1;
+			condEnd = then_i - 1;
+			if (else_i < 0) {
+				if (endIf_i < 0) {
+					thenEnd = sentence.length;
+				} else {
+					thenEnd = endIf_i;
+				}
+			} else {
+				thenEnd = else_i;
+				elseStart = else_i + 1;
+				if (endIf_i < 0) {
+					elseEnd = sentence.length;
+				} else {
+					elseEnd = endIf_i;
+				}
+			}
+		}
+		ret.addBranchElm(String.join(" ", selectArray(sentence, 1, condEnd + 1)) + " TRUE",
+				selectArray(sentence, thenStart, thenEnd));
+
+		if (elseStart > 0) {
+			ret.addBranchElm(String.join(" ", selectArray(sentence, 1, condEnd + 1)) + " FALSE",
+					selectArray(sentence, elseStart, elseEnd));
+		} else {
+			ret.addBranchElm(String.join(" ", selectArray(sentence, 1, condEnd + 1)) + " FALSE", KEY_CONTINUE);
+		}
+		ret.logout();
+		return ret;
+	}
+
+	BranchCmd expandRead(String[] sentence) {
+		BranchCmd ret = new BranchCmd(sentence);
+		int atEnd_i = searchCol(sentence, KEY_AT, KEY_END);
+		int notAtEnd_i = searchCol(sentence, KEY_NOT, KEY_AT, KEY_END);
+		int endRead_i = searchCol(sentence, KEY_END_READ);
+		int condEnd = 0;
+		int thenStart = 0;
+		int thenEnd = 0;
+		int elseStart = 0;
+		int elseEnd = 0;
+		if (atEnd_i < 0) {
+			if (searchExecIndexList(sentence).size() < 1) {
+				// エラー
+				String msg = "IF文内に実行命令がありません。";
+				throw new RuntimeException(msg);
+			} else {
+				// 最初はREADなので次を取得
+				thenStart = searchExecIndexList(sentence).get(1);
+				if (endRead_i < 0) {
+					thenEnd = sentence.length;
+				} else {
+					thenEnd = endRead_i;
+				}
+			}
+			condEnd = thenStart - 1;
+		} else {
+			thenStart = atEnd_i + 2;
+			condEnd = atEnd_i - 1;
+			if (notAtEnd_i < 0) {
+				if (endRead_i < 0) {
+					thenEnd = sentence.length;
+				} else {
+					thenEnd = endRead_i;
+				}
+			} else {
+				thenEnd = notAtEnd_i;
+				elseStart = notAtEnd_i + 1;
+				if (endRead_i < 0) {
+					elseEnd = sentence.length;
+				} else {
+					elseEnd = endRead_i;
+				}
+			}
+		}
+		ret.addBranchElm(String.join(" ", selectArray(sentence, 1, condEnd + 1)) + " AT END",
+				selectArray(sentence, thenStart, thenEnd));
+
+		if (elseStart > 0) {
+			ret.addBranchElm(String.join(" ", selectArray(sentence, 1, condEnd + 1)) + " NOT AT END",
+					selectArray(sentence, elseStart, elseEnd));
+		} else {
+			ret.addBranchElm(String.join(" ", selectArray(sentence, 1, condEnd + 1)) + " NOT AT END", KEY_CONTINUE);
+		}
+		ret.logout();
+		return ret;
+	}
+
 	private ExecCmd createCmdInExpand(ExecCmd prev, String[] sentence, ExecCmd lastExec, Deque<String[]> localQue) {
 		// 複数コマンドの判定
 		String[] execSentence = null;
@@ -202,7 +322,7 @@ public class ProcedureDiv extends BaseDiv {
 	 * @return
 	 */
 	private int searchCol(String[] sentence, String... searchs) {
-		for (int i = 0; i < sentence.length; i++) {
+		for (int i = 0; i < sentence.length - searchs.length + 1; i++) {
 			boolean match = true;
 			for (int j = 0; j < searchs.length; j++) {
 				if (!sentence[i + j].equals(searchs[j])) {
@@ -303,7 +423,7 @@ public class ProcedureDiv extends BaseDiv {
 		}
 		// PERFORMジャンプ
 		if (KEY_PERFORM.equals(sentence[0])) {
-			return doPerform(exec, sentence, localQue, nextSentence,endCmd);
+			return doPerform(exec, sentence, localQue, nextSentence, endCmd);
 		}
 		// 分岐コマンド
 		if (isExpand) {
@@ -312,7 +432,7 @@ public class ProcedureDiv extends BaseDiv {
 				return exec;
 			}
 			if (KEY_READ.equals(sentence[0])) {
-				return doRead(exec, sentence, localQue, nextSentence,endCmd);
+				return doRead(exec, sentence, localQue, nextSentence, endCmd);
 			}
 			if (KEY_IF.equals(sentence[0])) {
 				return doIf_old(exec, sentence, localQue, nextSentence);
@@ -336,69 +456,6 @@ public class ProcedureDiv extends BaseDiv {
 
 	private ExecCmd doIf_old(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence) {
 		return exec;
-	}
-
-	/**
-	 * 分岐コマンド。
-	 * 
-	 * @param sentence
-	 * @return
-	 */
-	BranchCmd expandIf(String[] sentence) {
-		BranchCmd ret = new BranchCmd(sentence);
-		int then_i = searchCol(sentence, KEY_THEN);
-		int else_i = searchCol(sentence, KEY_ELSE);
-		int endIf_i = searchCol(sentence, KEY_END_IF);
-		int condEnd = 0;
-		int thenStart = 0;
-		int thenEnd = 0;
-		int elseStart = 0;
-		int elseEnd = 0;
-		if (then_i < 0) {
-			if (searchExecIndexList(sentence).size() < 1) {
-				// エラー
-				String msg = "IF文内に実行命令がありません。";
-				throw new RuntimeException(msg);
-			} else {
-				// 最初はIFなので次を取得
-				thenStart = searchExecIndexList(sentence).get(1);
-				if (endIf_i < 0) {
-					thenEnd = sentence.length;
-				} else {
-					thenEnd = endIf_i;
-				}
-			}
-			condEnd = thenStart - 1;
-		} else {
-			thenStart = then_i + 1;
-			condEnd = then_i - 1;
-			if (else_i < 0) {
-				if (endIf_i < 0) {
-					thenEnd = sentence.length;
-				} else {
-					thenEnd = endIf_i;
-				}
-			} else {
-				thenEnd = else_i;
-				elseStart = else_i + 1;
-				if (endIf_i < 0) {
-					elseEnd = sentence.length;
-				} else {
-					elseEnd = endIf_i;
-				}
-			}
-		}
-		ret.addBranchElm(String.join(" ", selectArray(sentence, 1, condEnd + 1)) + " TRUE",
-				selectArray(sentence, thenStart, thenEnd));
-
-		if (elseStart > 0) {
-			ret.addBranchElm(String.join(" ", selectArray(sentence, 1, condEnd + 1)) + " FALSE",
-					selectArray(sentence, elseStart, elseEnd));
-		} else {
-			ret.addBranchElm(String.join(" ", selectArray(sentence, 1, condEnd + 1)) + " FALSE", KEY_CONTINUE);
-		}
-		ret.logout();
-		return ret;
 	}
 
 	class BranchCmd {
@@ -434,7 +491,8 @@ public class ProcedureDiv extends BaseDiv {
 
 	}
 
-	private ExecCmd doEvaluate(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence,ExecCmd endCmd) {
+	private ExecCmd doEvaluate(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence,
+			ExecCmd endCmd) {
 		Integer[] when_i = searchCols(sentence, KEY_WHEN);
 		int endEvaluate_i = searchCol(sentence, KEY_END_EVALUATE);
 		exec.setSentence(selectArray(sentence, 0, 1));
@@ -468,7 +526,8 @@ public class ProcedureDiv extends BaseDiv {
 			}
 			// next からは次のWHENと同じとなる。
 			if (next != "") {
-				exec.addNextCmd(createCmd(exec, next.split(" "), new ArrayDeque<>(locaQ), endCmd), cond0 + " = " + cond1);
+				exec.addNextCmd(createCmd(exec, next.split(" "), new ArrayDeque<>(locaQ), endCmd),
+						cond0 + " = " + cond1);
 				cond1.clear();
 				;
 			}

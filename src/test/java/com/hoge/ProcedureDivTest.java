@@ -18,7 +18,7 @@ public class ProcedureDivTest {
 	}
 
 	@Test
-	public void testDevideIfSentence1() {
+	public void testDevideIfSentence() {
 		String expCond = "A = B";
 		String expThen = "MOVE A TO B";
 		String expElse = "MOVE C TO D";
@@ -67,4 +67,18 @@ public class ProcedureDivTest {
 		}
 	}
 
+	@Test
+	public void testDevideReadSentence() {
+		String expCond1 = "A-REC AT END";
+		String expCond2 = "A-REC NOT AT END";
+		String expExec1 = "MOVE HIGH-VALUE TO KEY-1";
+
+		{
+			BranchCmd ret = proc.expandRead("READ A-REC AT END MOVE HIGH-VALUE TO KEY-1".split(" "));
+			Assert.assertEquals(expCond1, ret.branchList.get(0).cond);
+			Assert.assertEquals(expExec1, String.join(" ", ret.branchList.get(0).sentence));
+			Assert.assertEquals(expCond2, ret.branchList.get(1).cond);
+			Assert.assertEquals("continue", String.join(" ", ret.branchList.get(1).sentence));
+		}
+	}
 }
