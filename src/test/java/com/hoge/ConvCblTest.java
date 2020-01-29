@@ -153,6 +153,7 @@ public class ConvCblTest {
 					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
 		}
 	}
+
 	@Test
 	public void testExec01_longRead_false() throws IOException {
 //		ProcedureDiv.LONG_LABEL = false;
@@ -169,6 +170,7 @@ public class ConvCblTest {
 		}
 		outputLog(programId, target);
 		// PROCEDURE CHECK
+		target.getProgram().procDiv.logoutCmdTree("out/" + programId + "_tree.txt");
 		{
 			String expFile = PATH + "/exp_" + programId + "_tree_false.txt";
 			String actFile = "out/" + programId + "_tree.txt";
@@ -185,7 +187,6 @@ public class ConvCblTest {
 		target.getProgram().procDiv.logoutSecTree();
 		logger.info("===========================================================");
 		target.getProgram().procDiv.logoutCmdTree(null);
-		target.getProgram().procDiv.logoutCmdTree("out/" + programId + "_tree.txt");
 		logger.info("===========================================================");
 		target.getProgram().procDiv.outputDataDot(null);
 		target.getProgram().procDiv.outputDataDot("out/" + programId + ".dot");
@@ -218,6 +219,7 @@ public class ConvCblTest {
 					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
 		}
 		// PROCEDURE CHECK
+		target.getProgram().procDiv.logoutCmdTree("out/" + programId + "_tree.txt");
 		{
 			String expFile = PATH + "/exp_" + programId + "_tree.txt";
 			String actFile = "out/" + programId + "_tree.txt";
@@ -253,6 +255,7 @@ public class ConvCblTest {
 					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
 		}
 		// PROCEDURE CHECK
+		target.getProgram().procDiv.logoutCmdTree("out/" + programId + "_tree.txt");
 		{
 			String expFile = PATH + "/exp_" + programId + "_tree.txt";
 			String actFile = "out/" + programId + "_tree.txt";

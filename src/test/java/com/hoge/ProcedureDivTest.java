@@ -1,14 +1,12 @@
 package com.hoge;
 
-import java.util.List;
-
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.hoge.ProcedureDiv.IfCmd;
+import com.hoge.ProcedureDiv.BranchCmd;
 
 public class ProcedureDivTest {
 	static Logger logger = LoggerFactory.getLogger(ProcedureDiv.class.getName());
@@ -26,41 +24,47 @@ public class ProcedureDivTest {
 		String expElse = "MOVE C TO D";
 
 		{
-			IfCmd ret = proc.devideIfSentence("IF A = B MOVE A TO B".split(" "));
-			Assert.assertEquals(expCond + " TRUE", ret.thenCond);
-			Assert.assertEquals(expThen, String.join(" ", ret.thenSentence.get(0)));
-			Assert.assertEquals(null, ret.elseCond);
+			BranchCmd ret = proc.expandIf("IF A = B MOVE A TO B".split(" "));
+			Assert.assertEquals(expCond + " TRUE", ret.branchList.get(0).cond);
+			Assert.assertEquals(expThen, String.join(" ", ret.branchList.get(0).sentence));
+			Assert.assertEquals(expCond + " FALSE", ret.branchList.get(1).cond);
+			Assert.assertEquals("continue", String.join(" ", ret.branchList.get(1).sentence));
 		}
-//		{
-//			List<String[]> ret = proc.devideIfSentence("IF A = B MOVE A TO B END-IF".split(" "));
-//			Assert.assertEquals(expCond, String.join(" ", ret.get(0)));
-//			Assert.assertEquals(expThen, String.join(" ", ret.get(1)));
-//			Assert.assertEquals(2, ret.size());
-//		}
-//		{
-//			List<String[]> ret = proc.devideIfSentence("IF A = B THEN MOVE A TO B".split(" "));
-//			Assert.assertEquals(expCond, String.join(" ", ret.get(0)));
-//			Assert.assertEquals(expThen, String.join(" ", ret.get(1)));
-//			Assert.assertEquals(2, ret.size());
-//		}
-//		{
-//			List<String[]> ret = proc.devideIfSentence("IF A = B THEN MOVE A TO B END-IF".split(" "));
-//			Assert.assertEquals(expCond, String.join(" ", ret.get(0)));
-//			Assert.assertEquals(expThen, String.join(" ", ret.get(1)));
-//			Assert.assertEquals(2, ret.size());
-//		}
-//		{
-//			List<String[]> ret = proc.devideIfSentence("IF A = B THEN MOVE A TO B ELSE MOVE C TO D".split(" "));
-//			Assert.assertEquals(expCond, String.join(" ", ret.get(0)));
-//			Assert.assertEquals(expThen, String.join(" ", ret.get(1)));
-//			Assert.assertEquals(expElse, String.join(" ", ret.get(2)));
-//		}
-//		{
-//			List<String[]> ret = proc.devideIfSentence("IF A = B THEN MOVE A TO B ELSE MOVE C TO D END-IF".split(" "));
-//			Assert.assertEquals(expCond, String.join(" ", ret.get(0)));
-//			Assert.assertEquals(expThen, String.join(" ", ret.get(1)));
-//			Assert.assertEquals(expElse, String.join(" ", ret.get(2)));
-//		}
+		{
+			BranchCmd ret = proc.expandIf("IF A = B MOVE A TO B END-IF".split(" "));
+			Assert.assertEquals(expCond + " TRUE", ret.branchList.get(0).cond);
+			Assert.assertEquals(expThen, String.join(" ", ret.branchList.get(0).sentence));
+			Assert.assertEquals(expCond + " FALSE", ret.branchList.get(1).cond);
+			Assert.assertEquals("continue", String.join(" ", ret.branchList.get(1).sentence));
+		}
+		{
+			BranchCmd ret = proc.expandIf("IF A = B THEN MOVE A TO B".split(" "));
+			Assert.assertEquals(expCond + " TRUE", ret.branchList.get(0).cond);
+			Assert.assertEquals(expThen, String.join(" ", ret.branchList.get(0).sentence));
+			Assert.assertEquals(expCond + " FALSE", ret.branchList.get(1).cond);
+			Assert.assertEquals("continue", String.join(" ", ret.branchList.get(1).sentence));
+		}
+		{
+			BranchCmd ret = proc.expandIf("IF A = B THEN MOVE A TO B END-IF".split(" "));
+			Assert.assertEquals(expCond + " TRUE", ret.branchList.get(0).cond);
+			Assert.assertEquals(expThen, String.join(" ", ret.branchList.get(0).sentence));
+			Assert.assertEquals(expCond + " FALSE", ret.branchList.get(1).cond);
+			Assert.assertEquals("continue", String.join(" ", ret.branchList.get(1).sentence));
+		}
+		{
+			BranchCmd ret = proc.expandIf("IF A = B THEN MOVE A TO B ELSE MOVE C TO D".split(" "));
+			Assert.assertEquals(expCond + " TRUE", ret.branchList.get(0).cond);
+			Assert.assertEquals(expThen, String.join(" ", ret.branchList.get(0).sentence));
+			Assert.assertEquals(expCond + " FALSE", ret.branchList.get(1).cond);
+			Assert.assertEquals(expElse, String.join(" ", ret.branchList.get(1).sentence));
+		}
+		{
+			BranchCmd ret = proc.expandIf("IF A = B THEN MOVE A TO B ELSE MOVE C TO D END-IF".split(" "));
+			Assert.assertEquals(expCond + " TRUE", ret.branchList.get(0).cond);
+			Assert.assertEquals(expThen, String.join(" ", ret.branchList.get(0).sentence));
+			Assert.assertEquals(expCond + " FALSE", ret.branchList.get(1).cond);
+			Assert.assertEquals(expElse, String.join(" ", ret.branchList.get(1).sentence));
+		}
 	}
 
 }

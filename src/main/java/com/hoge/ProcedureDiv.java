@@ -11,6 +11,8 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.hoge.ProcedureDiv.BranchCmd.BranchElm;
+
 public class ProcedureDiv extends BaseDiv {
 	static Logger logger = LoggerFactory.getLogger(ProcedureDiv.class.getName());
 	static boolean LONG_LABEL = true;
@@ -49,7 +51,14 @@ public class ProcedureDiv extends BaseDiv {
 	private static final String KEY_WHEN = "WHEN";
 	private static final String KEY_THEN = "THEN";
 	private static final String KEY_ELSE = "ELSE";
+
+	private static final String[] KEY_CONTINUE = { "continue" };
+
 	private static final boolean isExpand = false;
+	/** DOT作成時にネストするたびに加算し、条件違いのノードを別ノードとする。 **/
+	private int nestCounter = 1;
+	/** DOT作成時に分岐を展開=true、合流=falseするかを指定する。 **/
+	private boolean isNextExpand = false;;
 
 	List<ProcSec> secList;
 	/** CmdTreeのルート **/
@@ -93,21 +102,21 @@ public class ProcedureDiv extends BaseDiv {
 			rootCmd = new ExecCmd(null, recList.get(0), WordType.LABEL);
 			Deque<String[]> localQue = new ArrayDeque<>();
 			// 分岐なしのツリーを作成
-			rootCmd.addNextCmd(createCmd(rootCmd, recList.get(1), localQue), "start");
+			rootCmd.addNextCmd(createCmd(rootCmd, recList.get(1), localQue, null), "start");
 			// 分岐を展開
 			expandBranch(rootCmd);
 		}
 	}
 
 	private void expandBranch(ExecCmd cmd) {
-		ExecCmd next = null;
 		while (cmd.nextList.size() > 0) {
 			if (cmd.type == WordType.BRANCH) {
 				ExecCmd endCmd = cmd.nextList.get(0).nextCmd;
-				ExecCmd prevCmd = cmd.prevCmd;
-				cmd = createExpand(cmd);
-				NextCmd repCmd = new NextCmd(cmd,"all");
-				prevCmd.nextList.set(0, repCmd);
+				createExpandBranch(cmd);
+//				ExecCmd prevCmd = cmd.prevCmd;
+//				cmd = createExpandBranch(cmd);
+//				NextCmd repCmd = new NextCmd(cmd, "all");
+//				prevCmd.nextList.set(0, repCmd);
 				cmd = endCmd;
 			} else {
 				cmd = cmd.nextList.get(0).nextCmd;
@@ -115,24 +124,53 @@ public class ProcedureDiv extends BaseDiv {
 		}
 	}
 
-	private ExecCmd createExpand(ExecCmd cmd) {
+	private ExecCmd createExpandBranch(ExecCmd cmd) {
+		BranchCmd branchCmd = null;
+		if (KEY_IF.equals(cmd.execSentence[0])) {
+			branchCmd = expandIf(cmd.execSentence);
+			// TODO 未実装
+//		} else if (KEY_EVALUATE.equals(cmd.execSentence[0])) {
+//			branchCmd = expandEvaluate(cmd.execSentence);
+//		} else if (KEY_READ.equals(cmd.execSentence[0])) {
+//			branchCmd = expandRead(cmd.execSentence);
+		} else {
+			// 固定値サンプル
+			String[] sentence1 = { "MOVE", "A", "TO", "B" };
+			String[] sentence2 = { "COMPUTE", "C", "TO", "D" };
+			branchCmd = new BranchCmd(cmd.execSentence);
+			branchCmd.addBranchElm("to b1", sentence1);
+			branchCmd.addBranchElm("to b2", sentence2);
+		}
 		// 分岐の合流ポイント
 		ExecCmd endCmd = cmd.nextList.get(0).nextCmd;
-
-		String[] sentence1 = { "MOVE", "A", "TO", "B" };
-		String[] sentence2 = { "COMPUTE", "C", "TO", "D" };
+		// 現在のnextをクリア
 		cmd.clearNextCmd();
-
-		ExecCmd b1 = new ExecCmd(cmd, sentence1, WordType.EXEC);
-		b1.addNextCmd(endCmd, "from b1");
-		cmd.addNextCmd(b1, "to b1");
-
-		ExecCmd b2 = new ExecCmd(cmd, sentence2, WordType.EXEC);
-		b2.addNextCmd(endCmd, "from b2");
-		cmd.addNextCmd(b2, "to b2");
-
-//		endCmd.setPrevCmd(b1);
+		for (BranchElm elm : branchCmd.branchList) {
+//			ExecCmd b1 = createCmdInExpand(cmd, elm.sentence, endCmd,new ArrayDeque<>());
+			ExecCmd b1 = createCmd(cmd, elm.sentence, new ArrayDeque<>(), endCmd);
+			cmd.addNextCmd(b1, elm.cond);
+		}
 		return cmd;
+	}
+
+	private ExecCmd createCmdInExpand(ExecCmd prev, String[] sentence, ExecCmd lastExec, Deque<String[]> localQue) {
+		// 複数コマンドの判定
+		String[] execSentence = null;
+		String[] nextSentence = null;
+		if (searchExecIndexList(sentence).size() > 1) {
+			execSentence = selectArray(sentence, 0, searchExecIndexList(sentence).get(1) - 1);
+			nextSentence = selectArray(sentence, searchExecIndexList(sentence).get(1), sentence.length);
+		} else if (searchExecIndexList(sentence).size() == 1) {
+			execSentence = sentence;
+		}
+		// PERFORMチェック
+		if (execSentence.length > 1 && KEY_PERFORM.equals(execSentence[0]) && searchSec(execSentence[1]) != null) {
+			localQue.push(nextSentence);
+
+		}
+		ExecCmd exec = new ExecCmd(prev, execSentence);
+		exec.addNextCmd(createCmdInExpand(exec, nextSentence, lastExec, localQue), "");
+		return exec;
 	}
 
 	/**
@@ -220,13 +258,13 @@ public class ProcedureDiv extends BaseDiv {
 	 * @param localQue Perform戻り場所のスタック。
 	 * @return
 	 */
-	private ExecCmd createCmd(ExecCmd prev, String[] sentence, Deque<String[]> localQue) {
+	private ExecCmd createCmd(ExecCmd prev, String[] sentence, Deque<String[]> localQue, ExecCmd endCmd) {
 		// + localQue.size());
 		String[] nextSentence = null;
 		// 次の行の設定
 		// getExecIndex(sentence).size());
 		if ((searchExecIndexList(sentence).size() > 1) && (!KEY_READ.equals(sentence[0]))
-				&& (!KEY_EVALUATE.equals(sentence[0]))) {
+				&& (!KEY_EVALUATE.equals(sentence[0])) && (!KEY_IF.equals(sentence[0]))) {
 			// 行に複数命令がある場合は２番め以降を次へ
 			nextSentence = this.selectArray(sentence, searchExecIndexList(sentence).get(1));
 			sentence = this.selectArray(sentence, 0, searchExecIndexList(sentence).get(1));
@@ -237,14 +275,22 @@ public class ProcedureDiv extends BaseDiv {
 				if (next_i < recList.size() - 1) { // 最後の行はEXITのはずなのでここではスキップ。
 					nextSentence = recList.get(next_i + 1);
 					if ((searchExecIndexList(nextSentence).size() > 1) && (next_i < recList.size() - 2)
-							&& (!KEY_READ.equals(nextSentence[0])) && (!KEY_EVALUATE.equals(nextSentence[0]))) {
+							&& (!KEY_READ.equals(nextSentence[0])) && (!KEY_EVALUATE.equals(nextSentence[0]))
+							&& (!KEY_IF.equals(nextSentence[0]))) {
 						// 次の行が複数命令の場合はスタックに積む。（READ以外）
 						localQue.push(recList.get(next_i + 2));
 					}
 				}
+			} else if (sentence.length > 1 && KEY_PERFORM.equals(sentence[0]) && searchSec(sentence[1]) != null) {
+				// 飛び先が存在するPERFORM
+				nextSentence = searchSec(sentence[1]).cols;
 			} else {
 				if (localQue.isEmpty()) {
-					return new ExecCmd(prev, sentence);
+					ExecCmd ret = new ExecCmd(prev, sentence);
+					if (endCmd != null) {
+						ret.addNextCmd(endCmd, "exit");
+					}
+					return ret;
 				}
 				nextSentence = localQue.pop();
 			}
@@ -253,58 +299,53 @@ public class ProcedureDiv extends BaseDiv {
 		// " que:" + localQue.size());
 		ExecCmd exec = new ExecCmd(prev, sentence);
 		if (KEY_EXIT.equals(sentence[0])) {
-			return doExit(exec, sentence, localQue, nextSentence);
+			return doExit(exec, sentence, localQue, nextSentence, endCmd);
 		}
 		// PERFORMジャンプ
 		if (KEY_PERFORM.equals(sentence[0])) {
-			return doPerform(exec, sentence, localQue, nextSentence);
+			return doPerform(exec, sentence, localQue, nextSentence,endCmd);
 		}
 		// 分岐コマンド
 		if (isExpand) {
 			if (KEY_EVALUATE.equals(sentence[0])) {
-				exec = doEvaluate(exec, sentence, localQue, nextSentence);
+				exec = doEvaluate(exec, sentence, localQue, nextSentence, endCmd);
 				return exec;
 			}
 			if (KEY_READ.equals(sentence[0])) {
-				return doRead(exec, sentence, localQue, nextSentence);
+				return doRead(exec, sentence, localQue, nextSentence,endCmd);
 			}
 			if (KEY_IF.equals(sentence[0])) {
-				return doIf(exec, sentence, localQue, nextSentence);
+				return doIf_old(exec, sentence, localQue, nextSentence);
 			}
 		}
-		exec.addNextCmd(createCmd(exec, nextSentence, localQue), "all");
+		exec.addNextCmd(createCmd(exec, nextSentence, localQue, endCmd), "all");
 		return exec;
 	}
 
-	private ExecCmd doPerform(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence) {
+	private ExecCmd doPerform(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence,
+			ExecCmd endCmd) {
 		if (searchSec(sentence[1]) != null) {
 			// PERFORNの次がSECTION 次行をスタックへ
 			locaQ.push(nextSentence);
-			exec.addNextCmd(createCmd(exec, searchSec(sentence[1]).cols, locaQ), "all");
+			exec.addNextCmd(createCmd(exec, searchSec(sentence[1]).cols, locaQ, endCmd), "all");
 		} else {
-			exec.addNextCmd(createCmd(exec, nextSentence, locaQ), "all");
+			exec.addNextCmd(createCmd(exec, nextSentence, locaQ, null), "all");
 		}
 		return exec;
 	}
 
-	private ExecCmd doIf(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence) {
-//		if (!DEVIDE_IF) {
-//			exec.addNextCmd(createCmd(exec, nextSentence, locaQ), "all");
-//			return exec;
-//		}
-		// then/elseに分割
-		IfCmd ifCmd = devideIfSentence(sentence);
+	private ExecCmd doIf_old(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence) {
 		return exec;
 	}
 
 	/**
-	 * IF文の分解。
+	 * 分岐コマンド。
 	 * 
 	 * @param sentence
 	 * @return
 	 */
-	IfCmd devideIfSentence(String[] sentence) {
-		IfCmd ret = new IfCmd(sentence);
+	BranchCmd expandIf(String[] sentence) {
+		BranchCmd ret = new BranchCmd(sentence);
 		int then_i = searchCol(sentence, KEY_THEN);
 		int else_i = searchCol(sentence, KEY_ELSE);
 		int endIf_i = searchCol(sentence, KEY_END_IF);
@@ -347,42 +388,53 @@ public class ProcedureDiv extends BaseDiv {
 				}
 			}
 		}
-		ret.thenCond = String.join(" ", selectArray(sentence, 1, condEnd + 1)) + " TRUE";
-		ret.addThen(selectArray(sentence, thenStart, thenEnd));
+		ret.addBranchElm(String.join(" ", selectArray(sentence, 1, condEnd + 1)) + " TRUE",
+				selectArray(sentence, thenStart, thenEnd));
 
 		if (elseStart > 0) {
-			ret.elseCond = String.join(" ", selectArray(sentence, 1, condEnd + 1)) + " FALSE";
-			ret.addElse(selectArray(sentence, elseStart, elseEnd));
-//			String[] elseStr = new String[elseEnd - elseStart];
-//			elseStr = selectArray(sentence, elseStart, elseEnd);
-//			retList.add(elseStr);
+			ret.addBranchElm(String.join(" ", selectArray(sentence, 1, condEnd + 1)) + " FALSE",
+					selectArray(sentence, elseStart, elseEnd));
+		} else {
+			ret.addBranchElm(String.join(" ", selectArray(sentence, 1, condEnd + 1)) + " FALSE", KEY_CONTINUE);
 		}
+		ret.logout();
 		return ret;
 	}
 
-	class IfCmd {
+	class BranchCmd {
 		String[] orgSentence;
-		String thenCond;
-		List<String[]> thenSentence;
-		String elseCond;
-		List<String[]> elseSentence;
+		List<BranchElm> branchList;
 
-		IfCmd(String[] org) {
+		class BranchElm {
+			String cond;
+			String[] sentence;
+
+			BranchElm(String cond, String[] sentence) {
+				this.cond = cond;
+				this.sentence = sentence;
+			}
+		}
+
+		BranchCmd(String[] org) {
 			this.orgSentence = org;
-			thenSentence = new ArrayList<String[]>();
-			elseSentence = new ArrayList<String[]>();
+			this.branchList = new ArrayList<BranchElm>();
 		}
 
-		public void addThen(String[] thenStr) {
-			this.thenSentence.add(thenStr);
+		void addBranchElm(String cond, String[] sentence) {
+			this.branchList.add(new BranchElm(cond, sentence));
 		}
 
-		public void addElse(String[] elseStr) {
-			this.elseSentence.add(elseStr);
+		public void logout() {
+			logger.debug("orgSentence = " + String.join(" ", orgSentence));
+			for (BranchElm elm : this.branchList) {
+				logger.debug("cond = " + elm.cond);
+				logger.debug("sentence = " + String.join(" ", elm.sentence));
+			}
 		}
+
 	}
 
-	private ExecCmd doEvaluate(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence) {
+	private ExecCmd doEvaluate(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence,ExecCmd endCmd) {
 		Integer[] when_i = searchCols(sentence, KEY_WHEN);
 		int endEvaluate_i = searchCol(sentence, KEY_END_EVALUATE);
 		exec.setSentence(selectArray(sentence, 0, 1));
@@ -416,7 +468,7 @@ public class ProcedureDiv extends BaseDiv {
 			}
 			// next からは次のWHENと同じとなる。
 			if (next != "") {
-				exec.addNextCmd(createCmd(exec, next.split(" "), new ArrayDeque<>(locaQ)), cond0 + " = " + cond1);
+				exec.addNextCmd(createCmd(exec, next.split(" "), new ArrayDeque<>(locaQ), endCmd), cond0 + " = " + cond1);
 				cond1.clear();
 				;
 			}
@@ -424,7 +476,8 @@ public class ProcedureDiv extends BaseDiv {
 		return exec;
 	}
 
-	private ExecCmd doRead(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence) {
+	private ExecCmd doRead(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence,
+			ExecCmd lastCmd) {
 //		if (!DEVIDE_READ) {
 //			exec.addNextCmd(createCmd(exec, nextSentence, locaQ), "all");
 //			return exec;
@@ -442,7 +495,8 @@ public class ProcedureDiv extends BaseDiv {
 			}
 			ExecCmd endCmd = new ExecCmd(exec, subSentence);
 			exec.addNextCmd(endCmd, KEY_AT + " " + KEY_END);
-			endCmd.addNextCmd(createCmd(endCmd, nextSentence, new ArrayDeque<>(locaQ)), KEY_AT + " " + KEY_END);
+			endCmd.addNextCmd(createCmd(endCmd, nextSentence, new ArrayDeque<>(locaQ), lastCmd),
+					KEY_AT + " " + KEY_END);
 		}
 		{
 			// NOT AT END
@@ -452,21 +506,27 @@ public class ProcedureDiv extends BaseDiv {
 			}
 			ExecCmd endCmd = new ExecCmd(exec, subSentence);
 			exec.addNextCmd(endCmd, KEY_NOT + " " + KEY_AT + " " + KEY_END);
-			endCmd.addNextCmd(createCmd(endCmd, nextSentence, new ArrayDeque<>(locaQ)),
+			endCmd.addNextCmd(createCmd(endCmd, nextSentence, new ArrayDeque<>(locaQ), lastCmd),
 					KEY_NOT + " " + KEY_AT + " " + KEY_END);
 		}
 		return exec;
 	}
 
-	private ExecCmd doExit(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence) {
+	private ExecCmd doExit(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence,
+			ExecCmd endCmd) {
 		if ((sentence.length > 1) && (KEY_PROGRAM.equals(sentence[1]))) {
 			// プログラム終了。最後のCmd。
 		} else {
 			// 戻るときの次行はスタックから
-			String[] next = locaQ.pop();
-			exec.addNextCmd(createCmd(exec, next, locaQ), "all");
+			if (endCmd != null) {
+				exec.addNextCmd(endCmd, "exit");
+			} else {
+				String[] next = locaQ.pop();
+				exec.addNextCmd(createCmd(exec, next, locaQ, null), "all");
+			}
 		}
 		return exec;
+
 	}
 
 	/**
@@ -530,7 +590,7 @@ public class ProcedureDiv extends BaseDiv {
 	}
 
 	/**
-	 * データフロー出力。Graphvizファイル出力。
+	 * 処理フロー出力。Graphvizファイル出力。
 	 * 
 	 * @param filePath ファイルパス。nullのときはINFOログへ出力。
 	 * @throws IOException
@@ -543,7 +603,7 @@ public class ProcedureDiv extends BaseDiv {
 		}
 		writeDot("strict digraph {", fw);
 		{
-			writeDot(addDotNode(this.rootCmd, fw), fw);
+			writeDot(addDotNode(this.rootCmd, fw, 1), fw);
 		}
 		writeDot("}\n", fw);
 		if (fw != null) {
@@ -551,31 +611,46 @@ public class ProcedureDiv extends BaseDiv {
 		}
 	}
 
-	String addDotNode(ExecCmd cmd, FileWriter fw) throws IOException {
+	/**
+	 * 処理フローのコマンドノードの追加。再帰的に自ノードの次ノードを作成して連結。
+	 * 
+	 * @param cmd    対象コマンド
+	 * @param fw     出力ファイル。nullのときはINFOログに出力
+	 * @param branch ブランチ番号。分岐を展開するときに加算されて同一コマンドを別ノードとして出力する。
+	 * @return 後続が追加されたノードを返す。次ノードがないとき、分岐が始まったときにDOTスクリプトを返す。。
+	 * @throws IOException
+	 */
+	private String addDotNode(ExecCmd cmd, FileWriter fw, int branch) throws IOException {
 		// CMDの出力
 		String execStr = cmd.execSentence[0];
 		if (LONG_LABEL) {
 			execStr = String.join(" ", cmd.execSentence);
 			execStr = execStr.replaceAll("\"", "");
 		}
-		writeDot(Integer.toString(cmd.hashCode()) + " [label=\"" + execStr + " " + cmd.type + "\"];", fw);
+		writeDot(Integer.toString(cmd.hashCode()) + Integer.toString(branch) + " [label=\"" + execStr + " " + cmd.type
+				+ "\"];", fw);
 		switch (cmd.nextList.size()) {
 		case 0:
-			return Integer.toString(cmd.hashCode());
+			return Integer.toString(cmd.hashCode()) + Integer.toString(branch);
 		case 1:
-			return Integer.toString(cmd.hashCode()) + " -> " + addDotNode(nextValid(cmd.nextList.get(0).nextCmd), fw);
+			return Integer.toString(cmd.hashCode()) + Integer.toString(branch) + " -> "
+					+ addDotNode(nextValid(cmd.nextList.get(0).nextCmd), fw, branch);
 		default:
 			for (NextCmd next : cmd.nextList) {
-				writeDot(cmd.hashCode() + " -> " + nextValid(next.nextCmd).hashCode() + " [label=\"" + next.condition
-						+ "\"]", fw);
-				writeDot(addDotNode(nextValid(next.nextCmd), fw), fw);
+				if (isNextExpand) {
+					nestCounter++;
+				}
+				writeDot(cmd.hashCode() + Integer.toString(branch) + " -> " + nextValid(next.nextCmd).hashCode()
+						+ Integer.toString(nestCounter) + " [label=\"" + next.condition + "\"]", fw);
+				writeDot(addDotNode(nextValid(next.nextCmd), fw, nestCounter), fw);
 			}
-			return Integer.toString(cmd.hashCode());
+			return Integer.toString(cmd.hashCode()) + Integer.toString(branch);
 		}
 	}
 
 	private ExecCmd nextValid(ExecCmd cmd) {
-		if(true)return cmd;	//	全部表示
+		if (true)
+			return cmd; // 全部表示
 		WordType[] fils = { WordType.BRANCH, WordType.EXEC, WordType.DEFINE };
 		ExecCmd next = cmd.nextList.get(0).nextCmd;
 		while (true) {
