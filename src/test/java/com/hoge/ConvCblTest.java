@@ -146,6 +146,7 @@ public class ConvCblTest {
 					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
 		}
 		// PROCEDURE CHECK
+		target.getProgram().procDiv.logoutCmdTree("out/" + programId + "_tree.txt");
 		{
 			String expFile = PATH + "/exp_" + programId + "_tree.txt";
 			String actFile = "out/" + programId + "_tree.txt";
