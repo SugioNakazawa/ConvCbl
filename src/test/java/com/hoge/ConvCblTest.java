@@ -154,31 +154,6 @@ public class ConvCblTest {
 		}
 	}
 
-	@Test
-	public void testExec01_longRead_false() throws IOException {
-//		ProcedureDiv.LONG_LABEL = false;
-//		ProcedureDiv.DEVIDE_READ = false;
-		String programId = "sample01";
-		String fileName = PATH + "/sample01.cbl";
-		ConvCbl target = new ConvCbl();
-		try {
-			target.setOutDir("out");
-			target.exec(fileName);
-		} catch (Exception e) {
-			e.printStackTrace();
-			fail();
-		}
-		outputLog(programId, target);
-		// PROCEDURE CHECK
-		target.getProgram().procDiv.logoutCmdTree("out/" + programId + "_tree.txt");
-		{
-			String expFile = PATH + "/exp_" + programId + "_tree_false.txt";
-			String actFile = "out/" + programId + "_tree.txt";
-			Assert.assertTrue(
-					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
-		}
-	}
-
 	private void outputLog(String programId, ConvCbl target) throws IOException {
 		// log
 		logger.info("===========================================================");
