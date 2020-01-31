@@ -23,7 +23,7 @@ public class DataDivTest {
 		program.read();
 		program.analyze();
 		List<String[]> retList = program.dataDiv.getRecList();
-		program.dataDiv.logoutContent();
+//		program.dataDiv.logoutContent();
 
 		Assert.assertEquals(56, retList.size());
 

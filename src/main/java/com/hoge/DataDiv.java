@@ -126,15 +126,15 @@ public class DataDiv extends BaseDiv {
 	 */
 	public void logoutContent() {
 		for (FdRec fd : fdList) {
-			logger.debug("***" + fd.fdFileName + ":" + fd.recName);
+			logger.info("***" + fd.fdFileName + ":" + fd.recName);
 			for (FdCol col : fd.fdColList) {
-				logger.debug("\t" + col.colName + " : " + col.colType);
+				logger.info("\t" + col.colName + " : " + col.colType);
 			}
 		}
 		for (WsRec fd : wsList) {
-			logger.debug("***" + fd.fdFileName + ":" + fd.recName);
+			logger.info("***" + fd.fdFileName + ":" + fd.recName);
 			for (FdCol col : fd.fdColList) {
-				logger.debug("\t" + col.colName + " : " + col.colType);
+				logger.info("\t" + col.colName + " : " + col.colType);
 			}
 		}
 	}

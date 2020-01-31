@@ -157,14 +157,14 @@ public class ConvCblTest {
 
 	private void outputLog(String programId, ConvCbl target) throws IOException {
 		// log
-//		logger.info("===========================================================");
-//		target.getProgram().procDiv.logoutRecList();
-//		logger.info("===========================================================");
-//		target.getProgram().procDiv.logoutSecTree();
-//		logger.info("===========================================================");
-//		target.getProgram().procDiv.logoutCmdTree(null);
-//		logger.info("===========================================================");
-//		target.getProgram().procDiv.outputDataDot(null);
+		logger.info("===========================================================");
+		target.getProgram().procDiv.logoutRecList();
+		logger.info("===========================================================");
+		target.getProgram().procDiv.logoutSecTree();
+		logger.info("===========================================================");
+		target.getProgram().procDiv.logoutCmdTree(null);
+		logger.info("===========================================================");
+		target.getProgram().procDiv.outputDataDot(null);
 		target.getProgram().procDiv.outputDataDot("out/" + programId + ".dot");
 	}
 

@@ -36,7 +36,7 @@ public class CblProgram {
 
 	public void read() throws IOException {
 		recList = CblSource.read(fileName);
-		logger.debug("read " + fileName + " " + recList.size() + " lines.");
+		logger.info("read " + fileName + " " + recList.size() + " lines.");
 	}
 
 	void analyze() {
