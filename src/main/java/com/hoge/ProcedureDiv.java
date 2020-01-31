@@ -12,12 +12,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hoge.ProcedureDiv.BranchCmd.BranchElm;
-
+/**
+ * PROCEDURE DIVISION 解析。
+ * @author nakazawasugio
+ * 改善予定：以下のような場合にCLOSE文が１つにならない。
+ * 030800 CLOSE IN01-FILE
+ * 030900 OT01-FILE.
+ */
 public class ProcedureDiv extends BaseDiv {
 	static Logger logger = LoggerFactory.getLogger(ProcedureDiv.class.getName());
 	static boolean LONG_LABEL = true;
-//	static boolean DEVIDE_READ = true;
-//	static boolean DEVIDE_IF = true;
 	// 命令文
 	private static final String KEY_EVALUATE = "EVALUATE";
 	private static final String KEY_IF = "IF";
@@ -230,7 +234,7 @@ public class ProcedureDiv extends BaseDiv {
 		} else {
 			ret.addBranchElm(String.join(" ", selectArray(sentence, 1, condEnd + 1)) + " FALSE", KEY_CONTINUE);
 		}
-		ret.logout();
+//		ret.logout();
 		return ret;
 	}
 
@@ -268,8 +272,8 @@ public class ProcedureDiv extends BaseDiv {
 			if (next != "") {
 				// 分岐
 				ret.addBranchElm(cond0 + cond1, next.split(" "));
-				logger.debug("cond0=" + cond0 + " cond1=" + cond1);
-				logger.debug("sentence=" + next);
+//				logger.debug("cond0=" + cond0 + " cond1=" + cond1);
+//				logger.debug("sentence=" + next);
 				cond1.clear();
 				;
 			}
@@ -330,7 +334,7 @@ public class ProcedureDiv extends BaseDiv {
 		} else {
 			ret.addBranchElm(String.join(" ", selectArray(sentence, 1, condEnd + 1)) + " NOT AT END", KEY_CONTINUE);
 		}
-		ret.logout();
+//		ret.logout();
 		return ret;
 	}
 
@@ -486,25 +490,13 @@ public class ProcedureDiv extends BaseDiv {
 		if (KEY_PERFORM.equals(sentence[0])) {
 			return doPerform(exec, sentence, localQue, nextSentence, endCmd);
 		}
-		// TODO このIFは削除予定
-		if (isExpand) {
-			if (KEY_EVALUATE.equals(sentence[0])) {
-				exec = doEvaluate(exec, sentence, localQue, nextSentence, endCmd);
-				return exec;
-			}
-			if (KEY_READ.equals(sentence[0])) {
-				return doRead(exec, sentence, localQue, nextSentence, endCmd);
-			}
-			if (KEY_IF.equals(sentence[0])) {
-				return doIf_old(exec, sentence, localQue, nextSentence);
-			}
-		}
 		exec.addNextCmd(createCmd(exec, nextSentence, localQue, endCmd), "all");
 		return exec;
 	}
 
 	private ExecCmd doPerform(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence,
 			ExecCmd endCmd) {
+		logger.debug("PERFORM : "+String.join(" ", sentence));
 		if (searchSec(sentence[1]) != null) {
 			// PERFORNの次がSECTION 次行をスタックへ
 			locaQ.push(nextSentence);
@@ -512,10 +504,6 @@ public class ProcedureDiv extends BaseDiv {
 		} else {
 			exec.addNextCmd(createCmd(exec, nextSentence, locaQ, endCmd), "all");
 		}
-		return exec;
-	}
-
-	private ExecCmd doIf_old(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence) {
 		return exec;
 	}
 

@@ -157,14 +157,14 @@ public class ConvCblTest {
 
 	private void outputLog(String programId, ConvCbl target) throws IOException {
 		// log
-		logger.info("===========================================================");
-		target.getProgram().procDiv.logoutRecList();
-		logger.info("===========================================================");
-		target.getProgram().procDiv.logoutSecTree();
-		logger.info("===========================================================");
-		target.getProgram().procDiv.logoutCmdTree(null);
-		logger.info("===========================================================");
-		target.getProgram().procDiv.outputDataDot(null);
+//		logger.info("===========================================================");
+//		target.getProgram().procDiv.logoutRecList();
+//		logger.info("===========================================================");
+//		target.getProgram().procDiv.logoutSecTree();
+//		logger.info("===========================================================");
+//		target.getProgram().procDiv.logoutCmdTree(null);
+//		logger.info("===========================================================");
+//		target.getProgram().procDiv.outputDataDot(null);
 		target.getProgram().procDiv.outputDataDot("out/" + programId + ".dot");
 	}
 
@@ -181,7 +181,7 @@ public class ConvCblTest {
 			Assert.assertEquals(2, target.getProgram().idDiv.recList.size());
 			Assert.assertEquals(6, target.getProgram().envDiv.recList.size());
 			Assert.assertEquals(44, target.getProgram().dataDiv.recList.size());
-			Assert.assertEquals(62, target.getProgram().procDiv.recList.size());
+			Assert.assertEquals(63, target.getProgram().procDiv.recList.size());
 		} catch (Exception e) {
 			e.printStackTrace();
 			fail();
@@ -217,7 +217,7 @@ public class ConvCblTest {
 			Assert.assertEquals(2, target.getProgram().idDiv.recList.size());
 			Assert.assertEquals(5, target.getProgram().envDiv.recList.size());
 			Assert.assertEquals(65, target.getProgram().dataDiv.recList.size());
-			Assert.assertEquals(73, target.getProgram().procDiv.recList.size());
+			Assert.assertEquals(76, target.getProgram().procDiv.recList.size());
 		} catch (Exception e) {
 			e.printStackTrace();
 			fail();
