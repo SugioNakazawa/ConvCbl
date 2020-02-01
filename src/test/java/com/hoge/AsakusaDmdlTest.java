@@ -21,6 +21,10 @@ public class AsakusaDmdlTest {
 			model.addColumn(target.new DmdlColumn("column_key", "TEXT", "キー１"));
 			model.addColumn(target.new DmdlColumn("column_value", "TEXT", "値１"));
 			target.addModel(model);
+			
+			Assert.assertEquals("model1", model.getName());
+			Assert.assertEquals("file", model.getNamespaceValue());
+			Assert.assertEquals("UTF-8", model.getCharset());
 		}
 		{
 			DmdlModel model = target.new DmdlModel("model2", "モデル2", "file", "UTF-8");

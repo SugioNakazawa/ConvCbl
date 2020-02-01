@@ -71,28 +71,6 @@ public class ConvCblTest {
 	}
 
 	@Test
-	public void testMain02() {
-		String[] args = { "-i", "src/test/resources/com/hoge/convcbl/sample02.cbl" };
-		try {
-			ConvCbl.main(args);
-		} catch (Exception e) {
-			e.printStackTrace();
-			fail();
-		}
-	}
-
-	@Test
-	public void testMain03() {
-		String[] args = { "-i", "src/test/resources/com/hoge/convcbl/sample03.cbl" };
-		try {
-			ConvCbl.main(args);
-		} catch (Exception e) {
-			e.printStackTrace();
-			fail();
-		}
-	}
-
-	@Test
 	public void testMainNoFileParam() {
 		String[] args = {};
 		try {
@@ -120,6 +98,37 @@ public class ConvCblTest {
 	}
 
 	@Test
+	public void testMainIllegalParam() {
+		String[] args = { "-p", "unknown" };
+		try {
+			ConvCbl.main(args);
+			fail();
+		} catch (IllegalArgumentException iae) {
+			Assert.assertEquals("Unrecognized option: -p", iae.getMessage());
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail();
+		}
+	}
+
+	@Test
+	public void testExec00() throws IOException {
+		ProcedureDiv.LONG_LABEL = true;
+		String programId = "sample01";
+		String fileName = PATH + "/sample01.cbl";
+		ConvCbl target = new ConvCbl();
+		try {
+			target.setOutDir("out");
+			target.exec(fileName);
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail();
+		}
+		target.getProgram().procDiv.setNextExpand(true);
+		target.getProgram().procDiv.outputDataDot(null);
+	}
+
+	@Test
 	public void testExec01() throws IOException {
 		ProcedureDiv.LONG_LABEL = true;
 		String programId = "sample01";
@@ -129,6 +138,7 @@ public class ConvCblTest {
 			target.setOutDir("out");
 			target.exec(fileName);
 
+			Assert.assertEquals("SAMPLE01", target.getProgram().idDiv.getProgramId());
 			Assert.assertEquals(2, target.getProgram().idDiv.recList.size());
 			Assert.assertEquals(7, target.getProgram().envDiv.recList.size());
 			Assert.assertEquals(56, target.getProgram().dataDiv.recList.size());
@@ -141,7 +151,7 @@ public class ConvCblTest {
 		// DATA CHEK
 		{
 			String expFile = PATH + "/exp_" + programId + ".dmdl";
-			String actFile = "out/" + programId + ".dmdl";
+			String actFile = target.getOutDir() + "/" + programId + ".dmdl";
 			Assert.assertTrue(
 					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
 		}

@@ -20,10 +20,10 @@ import com.hoge.AsakusaDmdl.DmdlModel;
  */
 public class DataDiv extends BaseDiv {
 	private static Logger logger = LoggerFactory.getLogger(DataDiv.class.getName());
-	//	メッセージ
+	// メッセージ
 	static String MSG_NO_SUPPORT = "COPY句ではREPLACING以外はサポートしていません。";
 	static String MSG_NOT_FOUND_COPY = "コピー句 {0} がありません。";
-	//	
+	//
 	private static final String KEY_FILE = "FILE";
 	private static final String KEY_FD = "FD";
 	private static final String KEY_WORKING_STORAGE = "WORKING-STORAGE";
@@ -238,22 +238,13 @@ public class DataDiv extends BaseDiv {
 	}
 
 	private List<String[]> replace(List<String[]> retList, String[] copyRec) {
-		String regex = Pattern.quote(copyRec[search(copyRec, KEY_REPLACING) + 1].replaceAll("=", ""));
-		String replacement = copyRec[search(copyRec, KEY_BY) + 1].replaceAll("=", "");
+		String regex = Pattern.quote(copyRec[ComUtil.search(copyRec, KEY_REPLACING) + 1].replaceAll("=", ""));
+		String replacement = copyRec[ComUtil.search(copyRec, KEY_BY) + 1].replaceAll("=", "");
 		for (int i = 0; i < retList.size(); i++) {
 			for (int j = 0; j < retList.get(i).length; j++) {
 				retList.get(i)[j] = retList.get(i)[j].replaceAll(regex, replacement);
 			}
 		}
 		return retList;
-	}
-
-	private int search(String[] cols, String key) {
-		for (int i = 0; i < cols.length; i++) {
-			if (key.equals(cols[i])) {
-				return i;
-			}
-		}
-		return -1;
 	}
 }

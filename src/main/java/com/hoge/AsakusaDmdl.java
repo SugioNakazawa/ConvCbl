@@ -11,7 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * AsakusaDMDL出力。
+ * AsakusaDMDL。
  * 
  * @author nakazawasugio
  *

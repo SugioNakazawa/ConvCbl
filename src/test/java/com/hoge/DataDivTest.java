@@ -3,8 +3,8 @@ package com.hoge;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.MessageFormat;
 import java.util.Arrays;
-import java.util.List;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -22,19 +22,19 @@ public class DataDivTest {
 		program = new CblProgram(PATH + "/convcbl/sample01.cbl");
 		program.read();
 		program.analyze();
-		List<String[]> retList = program.dataDiv.getRecList();
-//		program.dataDiv.logoutContent();
+		DataDiv dataDiv = program.dataDiv;
+		dataDiv.logoutContent();
 
-		Assert.assertEquals(56, retList.size());
+		Assert.assertEquals(56, dataDiv.recList.size());
 
-		Assert.assertEquals("I1-AA0001", retList.get(4)[1]);
-		Assert.assertEquals("I1-AA0005", retList.get(8)[1]);
-		Assert.assertEquals("O1-BB0001", retList.get(11)[1]);
-		Assert.assertEquals("O2-BB0001", retList.get(18)[1]);
-		Assert.assertEquals("O3-BB0001", retList.get(25)[1]);
-		Assert.assertEquals("CODE", retList.get(42)[1]);
-		Assert.assertEquals("INI-O1-BB0001", retList.get(45)[1]);
-		Assert.assertEquals("W1-BB0001", retList.get(51)[1]);
+		Assert.assertEquals("I1-AA0001", dataDiv.getRec(4)[1]);
+		Assert.assertEquals("I1-AA0005", dataDiv.getRec(8)[1]);
+		Assert.assertEquals("O1-BB0001", dataDiv.getRec(11)[1]);
+		Assert.assertEquals("O2-BB0001", dataDiv.getRec(18)[1]);
+		Assert.assertEquals("O3-BB0001", dataDiv.getRec(25)[1]);
+		Assert.assertEquals("CODE", dataDiv.getRec(42)[1]);
+		Assert.assertEquals("INI-O1-BB0001", dataDiv.getRec(45)[1]);
+		Assert.assertEquals("W1-BB0001", dataDiv.getRec(51)[1]);
 
 		Assert.assertEquals("I1-REC", program.dataDiv.getFdList().get(0).recName);
 		Assert.assertEquals("I1-AA0001", program.dataDiv.getFdList().get(0).fdColList.get(0).colName);
@@ -51,7 +51,7 @@ public class DataDivTest {
 
 	@Test
 	public void testCreateDmdl() throws IOException {
-		program = new CblProgram(PATH + "/convcbl/sample01.cbl");
+		program = new CblProgram(PATH + "/datadiv/sample01.cbl");
 		program.read();
 		program.analyze();
 		program.dataDiv.createDmdl("out");
@@ -62,13 +62,26 @@ public class DataDivTest {
 	}
 
 	@Test
-	public void testCopyError() throws IOException {
+	public void testCopyError1() throws IOException {
 		try {
-			program = new CblProgram(PATH + "/convcbl/error01.cbl");
+			program = new CblProgram(PATH + "/datadiv/error01.cbl");
 			program.read();
 			program.analyze();
+			Assert.fail();
 		} catch (Exception e) {
 			Assert.assertEquals(DataDiv.MSG_NO_SUPPORT, e.getMessage());
+		}
+	}
+
+	@Test
+	public void testCopyError2() throws IOException {
+		try {
+			program = new CblProgram(PATH + "/datadiv/error02.cbl");
+			program.read();
+			program.analyze();
+			Assert.fail();
+		} catch (Exception e) {
+			Assert.assertEquals(MessageFormat.format(DataDiv.MSG_NOT_FOUND_COPY, "ZZZ001"), e.getMessage());
 		}
 	}
 }

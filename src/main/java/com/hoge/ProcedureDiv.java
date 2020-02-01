@@ -62,6 +62,10 @@ public class ProcedureDiv extends BaseDiv {
 	/** DOT作成時に分岐を展開=true、合流=falseするかを指定する。 **/
 	private boolean isNextExpand = false;;
 
+	public void setNextExpand(boolean isNextExpand) {
+		this.isNextExpand = isNextExpand;
+	}
+
 	List<ProcSec> secList;
 	/** Cmdフローの先頭 **/
 	ExecCmd rootCmd;
@@ -174,7 +178,7 @@ public class ProcedureDiv extends BaseDiv {
 		return cmd;
 	}
 
-	private void shrinkBranchSentence(ExecCmd cmd) {
+	void shrinkBranchSentence(ExecCmd cmd) {
 		if (KEY_IF.equals(cmd.execSentence[0])) {
 			if (searchCol(cmd.execSentence, KEY_THEN) > 0) {
 				cmd.execSentence = selectArray(cmd.execSentence, 0, searchCol(cmd.execSentence, KEY_THEN));
@@ -207,7 +211,9 @@ public class ProcedureDiv extends BaseDiv {
 		int elseEnd = 0;
 		if (then_i < 0) {
 			if (searchExecIndexList(sentence).size() < 1) {
-				// エラー
+				String msg = "internal error";
+				throw new RuntimeException(msg);
+			} else if (searchExecIndexList(sentence).size() < 2) {
 				String msg = "IF文内に実行命令がありません。";
 				throw new RuntimeException(msg);
 			} else {
@@ -306,20 +312,25 @@ public class ProcedureDiv extends BaseDiv {
 		int notAtEndStart = 0;
 		int notAtEndEnd = 0;
 		if (atEnd_i < 0) {
-			if (searchExecIndexList(sentence).size() < 1) {
-				// エラー
-				String msg = "IF文内に実行命令がありません。";
-				throw new RuntimeException(msg);
-			} else {
-				// 最初はREADなので次を取得
-				atEndStart = searchExecIndexList(sentence).get(1);
-				if (endRead_i < 0) {
-					atEndEnd = sentence.length;
-				} else {
-					atEndEnd = endRead_i;
-				}
-			}
-			condEnd = atEndStart - 1;
+			// AT ENDが存在しない場合は条件なしでよいのではないか。
+			return ret;
+//			if (searchExecIndexList(sentence).size() < 1) {
+//				// エラー。実行文に命令がない。
+//				String msg = "IF文内に実行命令がありません。";
+//				throw new RuntimeException(msg);
+//			} else if (searchExecIndexList(sentence).size() == 1) {
+//				// 条件がないケース
+//				return ret;
+//			} else {
+//				// 最初はREADなので次を取得
+//				atEndStart = searchExecIndexList(sentence).get(1) - 1;
+//				if (endRead_i < 0) {
+//					atEndEnd = sentence.length - 1;
+//				} else {
+//					atEndEnd = endRead_i - 1;
+//				}
+//			}
+//			condEnd = atEndStart - 1;
 		} else {
 			atEndStart = atEnd_i + 2;
 			condEnd = atEnd_i - 1;
@@ -477,8 +488,7 @@ public class ProcedureDiv extends BaseDiv {
 					}
 				}
 			} else if (sentence.length > 0 && KEY_PERFORM.equals(sentence[0]) && searchSec(sentence[1]) != null) {
-				// 飛び先が存在するPERFORMはここでは次の行はからのまま。設定しない。
-//				nextSentence = searchSec(sentence[1]).defineSentence;
+				// 飛び先が存在するPERFORMはここでは次の行は空のまま。設定しない。
 			} else {
 				if (localQue.isEmpty()) {
 					ExecCmd ret = new ExecCmd(prev, sentence);
@@ -487,14 +497,10 @@ public class ProcedureDiv extends BaseDiv {
 					}
 					return ret;
 				}
-				nextSentence = localQue.pop();
+				// 発生しないはずなのでコメントアウト。
+				// nextSentence = localQue.pop();
 			}
 		}
-//		if(nextSentence != null)
-//		logger.debug("createCmd nextSentence : " + String.join(" ", nextSentence));
-//		logger.debug("");
-		// + localQue.size());
-		// " que:" + localQue.size());
 		ExecCmd exec = new ExecCmd(prev, sentence);
 		if (KEY_EXIT.equals(sentence[0])) {
 			return doExit(exec, sentence, localQue, nextSentence, endCmd);
@@ -558,15 +564,6 @@ public class ProcedureDiv extends BaseDiv {
 		void addBranchElm(String cond, String[] sentence) {
 			this.branchList.add(new BranchElm(cond, sentence));
 		}
-
-		public void logout() {
-//			logger.debug("orgSentence = " + String.join(" ", orgSentence));
-			for (BranchElm elm : this.branchList) {
-//				logger.debug("cond = " + elm.cond);
-//				logger.debug("sentence = " + String.join(" ", elm.sentence));
-			}
-		}
-
 	}
 
 //	private ExecCmd doEvaluate(ExecCmd exec, String[] sentence, Deque<String[]> locaQ, String[] nextSentence,
@@ -712,25 +709,21 @@ public class ProcedureDiv extends BaseDiv {
 
 	public void logoutSecTree() {
 		for (ProcSec sec : secList) {
-			logger.info("SECTION : " + sec.sectionName);
+			String txt = "";
+			if (sec.isRead || sec.isWrite) {
+				txt = "[ ";
+				if (sec.isRead()) {
+					txt += KEY_READ + " ";
+				}
+				if (sec.isWrite()) {
+					txt += KEY_WRITE + " ";
+				}
+				txt += "]";
+			}
+			logger.info("SECTION : " + sec.sectionName + txt);
 			for (ProcSec called : sec.callSecList) {
 				logger.info("\tcalled : " + called.sectionName);
 			}
-		}
-	}
-
-	public void logoutTree(ProcSec sec, String prefix) {
-		String txt = "";
-		if (sec.isRead()) {
-			txt += " " + KEY_READ;
-		}
-		if (sec.isWrite()) {
-			txt += " " + KEY_WRITE;
-		}
-		int index = recList.indexOf(sec.defineSentence);
-		logger.info(prefix + sec.sectionName + txt + " index=" + index);
-		for (ProcSec child : sec.callSecList) {
-			logoutTree(child, prefix + "\t");
 		}
 	}
 
@@ -884,19 +877,12 @@ public class ProcedureDiv extends BaseDiv {
 			this.type = convType(sentence);
 		}
 
-		public void setPrevCmd(ExecCmd b1) {
-			this.prevCmd = b1;
-		}
-
 		ExecCmd(ExecCmd prev, String[] sentence, CmdType type) {
 			this(prev, sentence);
 			this.type = type;
 		}
 
-		private CmdType convType(String[] sentence) {
-			if ((sentence == null) || (sentence.length < 1)) {
-				return CmdType.OTHER;
-			}
+		CmdType convType(String[] sentence) {
 			for (String key : BRANCH_WORD_LIST) {
 				if (sentence[0].equals(key))
 					return CmdType.BRANCH;
@@ -911,10 +897,6 @@ public class ProcedureDiv extends BaseDiv {
 				}
 			}
 			return CmdType.LABEL;
-		}
-
-		public void setSentence(String[] sentence) {
-			this.execSentence = sentence;
 		}
 
 		void addNextCmd(ExecCmd nextCmd, String cond) {

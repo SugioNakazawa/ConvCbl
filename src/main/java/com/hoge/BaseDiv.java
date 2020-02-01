@@ -24,14 +24,6 @@ abstract public class BaseDiv {
 		return recList.get(i);
 	}
 
-	public List<String[]> getRecList() {
-		return recList;
-	}
-
-	public void setRecList(List<String[]> recList) {
-		this.recList = recList;
-	}
-
 	public String getStat(String title) {
 		return title + " : " + recList.size() + " lines";
 	}

@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hoge.ProcedureDiv.BranchCmd;
+import com.hoge.ProcedureDiv.ExecCmd;
 
 public class ProcedureDivTest {
 	static Logger logger = LoggerFactory.getLogger(ProcedureDiv.class.getName());
@@ -18,11 +19,29 @@ public class ProcedureDivTest {
 	}
 
 	@Test
-	public void testDevideIfSentence() {
+	public void testExpandIf() {
 		String expCond = "A = B";
 		String expThen = "MOVE A TO B";
 		String expElse = "MOVE C TO D";
 
+		{
+			// 不正な呼び出し
+			try {
+				proc.expandIf("A = B".split(" "));
+				Assert.fail();
+			} catch (Exception e) {
+				Assert.assertEquals("internal error", e.getMessage());
+			}
+		}
+		{
+			// 不正な呼び出し
+			try {
+				proc.expandIf("IF A = B".split(" "));
+				Assert.fail();
+			} catch (Exception e) {
+				Assert.assertEquals("IF文内に実行命令がありません。", e.getMessage());
+			}
+		}
 		{
 			BranchCmd ret = proc.expandIf("IF A = B MOVE A TO B".split(" "));
 			Assert.assertEquals(expCond + " TRUE", ret.branchList.get(0).cond);
@@ -73,7 +92,6 @@ public class ProcedureDivTest {
 		String expCond2 = "A-REC NOT AT END";
 		String expExec1 = "MOVE HIGH-VALUE TO KEY-1";
 		String expExec2 = "MOVE A TO B";
-
 		{
 			BranchCmd ret = proc.expandRead("READ A-REC AT END MOVE HIGH-VALUE TO KEY-1".split(" "));
 			Assert.assertEquals(expCond1, ret.branchList.get(0).cond);
@@ -106,6 +124,21 @@ public class ProcedureDivTest {
 			Assert.assertEquals(expExec1, String.join(" ", ret.branchList.get(0).sentence));
 			Assert.assertEquals(expCond2, ret.branchList.get(1).cond);
 			Assert.assertEquals(expExec2 + " PERFORM A-SECTION", String.join(" ", ret.branchList.get(1).sentence));
+		}
+		{
+			// END条件なしREAD
+			BranchCmd ret = proc.expandRead("READ A-REC".split(" "));
+			Assert.assertEquals(0, ret.branchList.size());
+		}
+		{
+			// 命令なし（ありえない）
+			BranchCmd branch = proc.expandRead("A-REC".split(" "));
+			Assert.assertEquals(0, branch.branchList.size());
+		}
+		{
+			// THEN なし
+			BranchCmd ret = proc.expandRead("READ A-REC MOVE HIGH-VALUE TO KEY-1".split(" "));
+			Assert.assertEquals(0, ret.branchList.size());
 		}
 	}
 
@@ -151,5 +184,14 @@ public class ProcedureDivTest {
 			Assert.assertEquals("TRUE [KEY-I1 = KEY-I2]", ret.branchList.get(2).cond);
 			Assert.assertEquals(exec3, String.join(" ", ret.branchList.get(2).sentence));
 		}
+	}
+
+	@Test
+	public void testShrinkBranchSentence() {
+		String org = "IF A < B THEN MOVE A = B";
+		String[] sentence = org.split(" ");
+		ExecCmd prev = null;
+		ExecCmd cmd = proc.new ExecCmd(prev, sentence);
+		proc.shrinkBranchSentence(cmd);
 	}
 }
