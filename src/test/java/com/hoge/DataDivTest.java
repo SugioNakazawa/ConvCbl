@@ -25,7 +25,7 @@ public class DataDivTest {
 		DataDiv dataDiv = program.dataDiv;
 		dataDiv.logoutContent();
 
-		Assert.assertEquals(56, dataDiv.recList.size());
+		Assert.assertEquals(63, dataDiv.recList.size());
 
 		Assert.assertEquals("I1-AA0001", dataDiv.getRec(4)[1]);
 		Assert.assertEquals("I1-AA0005", dataDiv.getRec(8)[1]);
@@ -47,6 +47,10 @@ public class DataDivTest {
 		Assert.assertEquals("W1-REC", program.dataDiv.getWsList().get(2).recName);
 		Assert.assertEquals("W1-BB0005", program.dataDiv.getWsList().get(2).fdColList.get(4).colName);
 		Assert.assertEquals("999", program.dataDiv.getWsList().get(2).fdColList.get(4).colType);
+
+		Assert.assertEquals("P1-REC", program.dataDiv.getLkList().get(0).recName);
+		Assert.assertEquals("P1-BB0005", program.dataDiv.getLkList().get(0).fdColList.get(4).colName);
+		Assert.assertEquals("999", program.dataDiv.getLkList().get(0).fdColList.get(4).colType);
 	}
 
 	@Test

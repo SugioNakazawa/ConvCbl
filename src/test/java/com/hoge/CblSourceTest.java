@@ -4,7 +4,9 @@
 package com.hoge;
 
 import java.io.IOException;
+import java.util.List;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 /**
@@ -16,7 +18,9 @@ public class CblSourceTest {
 
 	@Test
 	public void test() throws IOException {
-		CblSource source = new CblSource();
-		CblSource.read(PATH + "/sample01.cbl");
+		CblSourceReader reader = new CblSourceReader(PATH + "/sample01.cbl");
+		List<String[]> ret = reader.read();
+
+		Assert.assertEquals(104, ret.size());
 	}
 }

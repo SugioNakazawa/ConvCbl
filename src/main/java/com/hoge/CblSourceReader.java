@@ -16,12 +16,23 @@ import org.slf4j.LoggerFactory;
  * @author nakazawasugio
  *
  */
-public class CblSource {
-	static Logger logger = LoggerFactory.getLogger(CblSource.class.getName());
+public class CblSourceReader {
+	static Logger logger = LoggerFactory.getLogger(CblSourceReader.class.getName());
 
 	static int[] COMMENT_AREA = { 6, 7 }; // ７カラム目
 	static int[] A_AREA = { 7, 11 }; // ８〜１１カラム目
 	static int[] B_AREA = { 11, 73 }; // １２〜７３カラム目
+
+	/** COBOLソースファイルパス **/
+	private String fileName;
+
+	/**
+	 * 
+	 * @param fileName COBOLソースファイルパス
+	 */
+	public CblSourceReader(String fileName) {
+		this.fileName = fileName;
+	}
 
 	/**
 	 * COBOLソースを読み込み実行文リストを返す。<BR>
@@ -34,7 +45,7 @@ public class CblSource {
 	 * @return 実行文のリスト。
 	 * @throws IOException
 	 */
-	static public List<String[]> read(String fileName) throws IOException {
+	public List<String[]> read() throws IOException {
 
 		List<String[]> recList = new ArrayList<String[]>();
 		Path path = Paths.get(fileName);

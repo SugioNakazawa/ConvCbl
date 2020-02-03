@@ -62,7 +62,7 @@ public class ConvCbl {
 		program = new CblProgram(fileName);
 		program.read();
 		program.analyze();
-		program.dataDiv.createDmdl(outDir);
+		program.createDmdl(outDir);
 		program.logout();
 	}
 

@@ -27,6 +27,7 @@ public class DataDiv extends BaseDiv {
 	private static final String KEY_FILE = "FILE";
 	private static final String KEY_FD = "FD";
 	private static final String KEY_WORKING_STORAGE = "WORKING-STORAGE";
+	private static final Object KEY_LINKAGE = "LINKAGE";
 	/** 01 はレコードを示す **/
 	private static final String KEY_01 = "01";
 	/** COPY 句 **/
@@ -37,10 +38,12 @@ public class DataDiv extends BaseDiv {
 	/** COBOLソースのフルパス **/
 	private String filePath;
 	private String fileName;
-	/** FD SECTION の定義内容 **/
+	/** FILE SECTION の定義内容 **/
 	private List<FdRec> fdList;
 	/** WORKING-STORAGE SECTION の定義内容 **/
 	private List<WsRec> wsList;
+	/** LINKAGE SECTION の定義内容 **/
+	private List<LkRec> lkList;
 
 	/**
 	 * コンストラクタ。
@@ -58,6 +61,7 @@ public class DataDiv extends BaseDiv {
 		this.fileName = tmp;
 		this.fdList = new ArrayList<FdRec>();
 		this.wsList = new ArrayList<WsRec>();
+		this.lkList = new ArrayList<LkRec>();
 	}
 
 	public String getFileName() {
@@ -70,6 +74,10 @@ public class DataDiv extends BaseDiv {
 
 	public List<WsRec> getWsList() {
 		return wsList;
+	}
+
+	public List<LkRec> getLkList() {
+		return lkList;
 	}
 
 	/**
@@ -90,24 +98,26 @@ public class DataDiv extends BaseDiv {
 		{
 			BaseSec fd = null;
 			boolean inWork = false;
+			boolean inLinkage = false;
 			for (String[] cols : recList) {
-//				logger.debug(String.join(" ", cols));
 				if (Const.KEY_DATA.equals(cols[0]) && Const.KEY_DIVISION.equals(cols[1])) {
-//					logger.debug("found DATA DIVISION");
 				} else if (KEY_FILE.equals(cols[0]) && Const.KEY_SECTION.equals(cols[1])) {
-//					logger.debug("found FILE SECTION");
 				} else if (KEY_WORKING_STORAGE.equals(cols[0]) && Const.KEY_SECTION.equals(cols[1])) {
 					inWork = true;
-//					logger.debug("found WORKING-STORAGE SECTION");
+					inLinkage = false;
+				} else if (KEY_LINKAGE.equals(cols[0]) && Const.KEY_SECTION.equals(cols[1])) {
+					inWork = false;
+					inLinkage = true;
 				} else if (KEY_FD.equals(cols[0])) {
-//					logger.debug("FD " + cols[1]);
 					fd = new FdRec(cols[1]);
 					this.fdList.add((FdRec) fd);
 				} else if (KEY_01.equals(cols[0])) {
-//					logger.debug("01 " + cols[1]);
 					if (inWork) {
 						fd = new WsRec();
 						this.wsList.add((WsRec) fd);
+					} else if (inLinkage) {
+						fd = new LkRec();
+						this.lkList.add((LkRec) fd);
 					}
 					fd.setRecName(cols[1]);
 				} else {
@@ -126,13 +136,19 @@ public class DataDiv extends BaseDiv {
 	 */
 	public void logoutContent() {
 		for (FdRec fd : fdList) {
-			logger.info("***" + fd.fdFileName + ":" + fd.recName);
+			logger.info("recName=" + fd.recName + " fdName=" + fd.fdName);
 			for (FdCol col : fd.fdColList) {
 				logger.info("\t" + col.colName + " : " + col.colType);
 			}
 		}
 		for (WsRec fd : wsList) {
-			logger.info("***" + fd.fdFileName + ":" + fd.recName);
+			logger.info("recName=" + fd.recName);
+			for (FdCol col : fd.fdColList) {
+				logger.info("\t" + col.colName + " : " + col.colType);
+			}
+		}
+		for (LkRec fd : lkList) {
+			logger.info("recName=" + fd.recName);
 			for (FdCol col : fd.fdColList) {
 				logger.info("\t" + col.colName + " : " + col.colType);
 			}
@@ -186,19 +202,41 @@ public class DataDiv extends BaseDiv {
 		}
 	}
 
+	/**
+	 * FILE SECTION
+	 * 
+	 * @author nakazawasugio
+	 *
+	 */
 	public class FdRec extends BaseSec {
-		String fdFileName;
+		String fdName;
 
 		public FdRec(String fdFileName) {
 			super();
-			this.fdFileName = fdFileName;
+			this.fdName = fdFileName;
 		}
 	}
 
+	/**
+	 * WORKING=STRAGE SECTION
+	 * 
+	 * @author nakazawasugio
+	 *
+	 */
 	public class WsRec extends BaseSec {
-		String fdFileName;
-
 		public WsRec() {
+			super();
+		}
+	}
+
+	/**
+	 * LINKAGE SECTION
+	 * 
+	 * @author nakazawasugio
+	 *
+	 */
+	public class LkRec extends BaseSec {
+		public LkRec() {
 			super();
 		}
 	}
@@ -222,7 +260,8 @@ public class DataDiv extends BaseDiv {
 	private List<String[]> doCopy(String[] cols) {
 		File dir = new File(filePath);
 		try {
-			List<String[]> retList = CblSource.read(dir.getParent() + "/" + cols[1]);
+			CblSourceReader reader = new CblSourceReader(dir.getParent() + "/" + cols[1]);
+			List<String[]> retList = reader.read();
 			if (cols.length == 2) {
 				return retList;
 			} else if (KEY_REPLACING.equals(cols[2])) {

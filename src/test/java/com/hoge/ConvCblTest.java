@@ -115,7 +115,7 @@ public class ConvCblTest {
 	public void testExec00() throws IOException {
 		ProcedureDiv.LONG_LABEL = true;
 		String programId = "sample01";
-		String fileName = PATH + "/sample01.cbl";
+		String fileName = PATH + "/" + programId + ".cbl";
 		ConvCbl target = new ConvCbl();
 		try {
 			target.setOutDir("out");
@@ -141,28 +141,29 @@ public class ConvCblTest {
 			Assert.assertEquals("SAMPLE01", target.getProgram().idDiv.getProgramId());
 			Assert.assertEquals(2, target.getProgram().idDiv.recList.size());
 			Assert.assertEquals(7, target.getProgram().envDiv.recList.size());
-			Assert.assertEquals(56, target.getProgram().dataDiv.recList.size());
+			Assert.assertEquals(63, target.getProgram().dataDiv.recList.size());
 			Assert.assertEquals(61, target.getProgram().procDiv.recList.size());
 		} catch (Exception e) {
 			e.printStackTrace();
 			fail();
 		}
 		outputLog(programId, target);
-		// DATA CHEK
 		{
+			// DATA CHEK
 			String expFile = PATH + "/exp_" + programId + ".dmdl";
 			String actFile = target.getOutDir() + "/" + programId + ".dmdl";
 			Assert.assertTrue(
 					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
 		}
-		// PROCEDURE CHECK
-		target.getProgram().procDiv.logoutCmdTree("out/" + programId + "_tree.txt");
 		{
+			// PROCEDURE CHECK
+			target.getProgram().procDiv.logoutCmdTree("out/" + programId + "_tree.txt");
 			String expFile = PATH + "/exp_" + programId + "_tree.txt";
 			String actFile = "out/" + programId + "_tree.txt";
 			Assert.assertTrue(
 					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
 		}
+		target.getProgram().dataDiv.logoutContent();
 	}
 
 	private void outputLog(String programId, ConvCbl target) throws IOException {

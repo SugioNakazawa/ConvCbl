@@ -27,6 +27,7 @@ public class CblProgram {
 		procDiv = new ProcedureDiv();
 	}
 
+	@SuppressWarnings("unused")
 	private CblProgram() {
 	}
 
@@ -35,7 +36,8 @@ public class CblProgram {
 	}
 
 	public void read() throws IOException {
-		recList = CblSource.read(fileName);
+		CblSourceReader reader = new CblSourceReader(fileName);
+		recList = reader.read();
 		logger.info("read " + fileName + " " + recList.size() + " lines.");
 	}
 
@@ -81,5 +83,14 @@ public class CblProgram {
 		logger.info(procDiv.getStat(Const.KEY_PROCEDURE + " " + Const.KEY_DIVISION));
 
 		logger.info("valid " + recList.size() + " lines\n");
+	}
+
+	/**
+	 * 
+	 * @param outDir DMDL出力ディレクトリ。
+	 * @throws IOException
+	 */
+	public void createDmdl(String outDir) throws IOException {
+		this.dataDiv.createDmdl(outDir);
 	}
 }
