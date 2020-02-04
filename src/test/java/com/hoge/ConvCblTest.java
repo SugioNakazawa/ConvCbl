@@ -148,6 +148,8 @@ public class ConvCblTest {
 			fail();
 		}
 		outputLog(programId, target);
+		target.getProgram().dataDiv.logoutContent();
+		target.getProgram().procDiv.outputDataDot("out/" + programId + ".dot");
 		{
 			// DATA CHEK
 			String expFile = PATH + "/exp_" + programId + ".dmdl";
@@ -163,20 +165,6 @@ public class ConvCblTest {
 			Assert.assertTrue(
 					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
 		}
-		target.getProgram().dataDiv.logoutContent();
-	}
-
-	private void outputLog(String programId, ConvCbl target) throws IOException {
-		// log
-		logger.info("===========================================================");
-		target.getProgram().procDiv.logoutRecList();
-		logger.info("===========================================================");
-		target.getProgram().procDiv.logoutSecTree();
-		logger.info("===========================================================");
-		target.getProgram().procDiv.logoutCmdTree(null);
-		logger.info("===========================================================");
-		target.getProgram().procDiv.outputDataDot(null);
-		target.getProgram().procDiv.outputDataDot("out/" + programId + ".dot");
 	}
 
 	@Test
@@ -198,6 +186,7 @@ public class ConvCblTest {
 			fail();
 		}
 		outputLog(programId, target);
+		target.getProgram().procDiv.outputDataDot("out/" + programId + ".dot");
 		// DATA CHEK
 		{
 			String expFile = PATH + "/exp_" + programId + ".dmdl";
@@ -234,6 +223,7 @@ public class ConvCblTest {
 			fail();
 		}
 		outputLog(programId, target);
+		target.getProgram().procDiv.outputDataDot("out/" + programId + ".dot");
 		// DATA CHEK
 		{
 			String expFile = PATH + "/exp_" + programId + ".dmdl";
@@ -249,6 +239,18 @@ public class ConvCblTest {
 			Assert.assertTrue(
 					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
 		}
+	}
+
+	private void outputLog(String programId, ConvCbl target) throws IOException {
+		// log
+		logger.info("===========================================================");
+		target.getProgram().procDiv.logoutRecList();
+		logger.info("===========================================================");
+		target.getProgram().procDiv.logoutSecTree();
+		logger.info("===========================================================");
+		target.getProgram().procDiv.logoutCmdTree(null);
+		logger.info("===========================================================");
+		target.getProgram().procDiv.outputDataDot(null);
 	}
 
 }

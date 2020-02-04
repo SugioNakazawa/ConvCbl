@@ -16,8 +16,12 @@ import com.hoge.ProcedureDiv.BranchCmd.BranchElm;
 /**
  * PROCEDURE DIVISION 解析。
  * 
- * @author nakazawasugio 課題１：以下のような場合にCLOSE文が１つにならない。 030800 CLOSE IN01-FILE
- *         030900 OT01-FILE. 課題２：EVALUATE内の複数PERFORMで１つ目のPERFORMしか処理していない。
+ * @author nakazawasugio <br>
+ *         課題１：以下のような場合にCLOSE文が１つにならない。 030800 CLOSE IN01-FILE 030900
+ *         OT01-FILE.<br>
+ *         課題２：EVALUATE内の複数PERFORMで１つ目のPERFORMしか処理していない。 <br>
+ *         課題３： PERFORM 手続き名 UNTIL の戻りペアの設定をしていない。<br>
+ * 
  */
 public class ProcedureDiv extends BaseDiv {
 	static Logger logger = LoggerFactory.getLogger(ProcedureDiv.class.getName());
@@ -33,17 +37,17 @@ public class ProcedureDiv extends BaseDiv {
 	private static final String KEY_EXIT = "EXIT";
 	private static final String KEY_MOVE = "MOVE";
 	private static final String KEY_PERFORM = "PERFORM";
+	private static final String KEY_END_PERFORM = "END-PERFORM";
 	private static final String KEY_WRITE = "WRITE";
 	/** 命令単語の一覧 **/
 	private static String[] EXEC_WORD_LIST = { KEY_COMPUTE, KEY_EVALUATE, KEY_EXIT, KEY_IF, KEY_MOVE, KEY_PERFORM,
-			KEY_READ, KEY_WRITE };
+			KEY_END_PERFORM, KEY_READ, KEY_WRITE };
 	private static final String KEY_END_EVALUATE = "END-EVALUATE";
 	private static final String KEY_END_IF = "END-IF";
 	private static final String KEY_END_READ = "END-READ";
 	// 補助
 	private static final String KEY_AT = "AT";
 	private static final String KEY_END = "END";
-	private static final String KEY_END_PERFORM = "END-PERFORM";
 	private static final String KEY_FALSE = "FALSE";
 	private static final String KEY_NOT = "NOT";
 	private static final String KEY_OTHER = "OTHER";
@@ -472,7 +476,7 @@ public class ProcedureDiv extends BaseDiv {
 					return ret;
 				}
 				// 発生しないはずなのでコメントアウト。
-				// nextSentence = localQue.pop();
+				nextSentence = localQue.pop();
 			}
 		}
 		ExecCmd exec = new ExecCmd(prev, sentence);
@@ -483,8 +487,32 @@ public class ProcedureDiv extends BaseDiv {
 		if (KEY_PERFORM.equals(sentence[0])) {
 			return doPerform(exec, sentence, localQue, nextSentence, endCmd);
 		}
+		// END_PERFORMの場合には遡ってPERFORM UNTILを検索
+		if (KEY_END_PERFORM.equals(sentence[0])) {
+			doEndPerform(exec);
+		}
 		exec.addNextCmd(createCmd(exec, nextSentence, localQue, endCmd), "all");
 		return exec;
+	}
+
+	/**
+	 * END-PERFORM コマンドには対応するPERFORM UNTIL へのペアを設定する。
+	 * 
+	 * @param exec
+	 */
+	private void doEndPerform(ExecCmd exec) {
+		ExecCmd prev = exec.prevCmd;
+		while (prev != null) {
+			if (prev.execSentence.length > 1) {
+				if (KEY_PERFORM.equals(prev.execSentence[0]) && KEY_UNTIL.equals(prev.execSentence[1])
+						&& prev.getPair() == null) {
+					exec.setPair(prev);
+					prev.setPair(exec);
+					return;
+				}
+			}
+			prev = prev.prevCmd;
+		}
 	}
 
 	/**
@@ -697,9 +725,6 @@ public class ProcedureDiv extends BaseDiv {
 	 * @throws IOException
 	 */
 	private void writeDotNode(ExecCmd cmd, int branch) throws IOException {
-		if ("READ IN01-FILE".equals(String.join(" ", cmd.execSentence))) {
-			logger.debug("");
-		}
 		String execStr = cmd.execSentence[0];
 		if (LONG_LABEL) {
 			execStr = String.join(" ", cmd.execSentence);
@@ -722,6 +747,11 @@ public class ProcedureDiv extends BaseDiv {
 				writeDotRec(Integer.toString(cmd.hashCode()) + Integer.toString(branch) + " -> " + "io"
 						+ Integer.toString(cmd.hashCode()) + Integer.toString(branch));
 			}
+		}
+		// pairノードがある場合には接続線を出力。
+		if ((cmd.getPair() != null) && (KEY_END_PERFORM.equals(cmd.execSentence[0]))) {
+			writeDotRec(Integer.toString(cmd.hashCode()) + Integer.toString(branch) + " -> "
+					+ Integer.toString(cmd.getPair().hashCode()) + Integer.toString(branch));
 		}
 	}
 
@@ -813,12 +843,25 @@ public class ProcedureDiv extends BaseDiv {
 		List<NextCmd> nextList;
 		String[] execSentence;
 		CmdType type;
+		private ExecCmd pair;
 
 		ExecCmd(ExecCmd prev, String[] sentence) {
 			this.prevCmd = prev;
 			this.nextList = new ArrayList<NextCmd>();
 			this.execSentence = sentence;
 			this.type = convType(sentence);
+		}
+
+		public String getSentenceStr() {
+			return String.join(" ", execSentence);
+		}
+
+		public ExecCmd getPair() {
+			return this.pair;
+		}
+
+		public void setPair(ExecCmd pair) {
+			this.pair = pair;
 		}
 
 		ExecCmd(ExecCmd prev, String[] sentence, CmdType type) {
