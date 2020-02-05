@@ -19,13 +19,14 @@ import com.hoge.ProcedureDiv.BranchCmd.BranchElm;
  * @author nakazawasugio <br>
  *         課題１：以下のような場合にCLOSE文が１つにならない。 030800 CLOSE IN01-FILE 030900
  *         OT01-FILE.<br>
- *         課題２：EVALUATE内の複数PERFORMで１つ目のPERFORMしか処理していない。 <br>
- *         課題３： PERFORM 手続き名 UNTIL の戻りペアの設定をしていない。<br>
  * 
  */
 public class ProcedureDiv extends BaseDiv {
 	static Logger logger = LoggerFactory.getLogger(ProcedureDiv.class.getName());
+	/** DOT出力時のノードのラベルに文をすべて出力 **/
 	static boolean LONG_LABEL = true;
+	/** DOT作成時に分岐を展開=true、合流=falseするかを指定する。 **/
+	private boolean isTreeStruct = false;
 	// 命令文
 	private static final String KEY_EVALUATE = "EVALUATE";
 	private static final String KEY_IF = "IF";
@@ -33,15 +34,17 @@ public class ProcedureDiv extends BaseDiv {
 	/** 分岐命令 **/
 	private static String[] BRANCH_WORD_LIST = { KEY_EVALUATE, KEY_IF, KEY_READ };
 
+	private static final String KEY_CLOSE = "CLOSE";
 	private static final String KEY_COMPUTE = "COMPUTE";
 	private static final String KEY_EXIT = "EXIT";
 	private static final String KEY_MOVE = "MOVE";
+	private static final String KEY_OPEN = "OPEN";
 	private static final String KEY_PERFORM = "PERFORM";
 	private static final String KEY_END_PERFORM = "END-PERFORM";
 	private static final String KEY_WRITE = "WRITE";
 	/** 命令単語の一覧 **/
-	private static String[] EXEC_WORD_LIST = { KEY_COMPUTE, KEY_EVALUATE, KEY_EXIT, KEY_IF, KEY_MOVE, KEY_PERFORM,
-			KEY_END_PERFORM, KEY_READ, KEY_WRITE };
+	private static String[] EXEC_WORD_LIST = { KEY_CLOSE, KEY_COMPUTE, KEY_EVALUATE, KEY_EXIT, KEY_IF, KEY_MOVE,
+			KEY_OPEN, KEY_PERFORM, KEY_END_PERFORM, KEY_READ, KEY_WRITE };
 	private static final String KEY_END_EVALUATE = "END-EVALUATE";
 	private static final String KEY_END_IF = "END-IF";
 	private static final String KEY_END_READ = "END-READ";
@@ -65,13 +68,11 @@ public class ProcedureDiv extends BaseDiv {
 
 	/** DOT作成時にネストするたびに加算し、条件違いのノードを別ノードとする。 **/
 	private int nestCounter = 1;
-	/** DOT作成時に分岐を展開=true、合流=falseするかを指定する。 **/
-	private boolean isNextExpand = false;
 	/** DOTファイルを出力するWriter **/
 	private FileWriter dotFw = null;
 
-	public void setNextExpand(boolean isNextExpand) {
-		this.isNextExpand = isNextExpand;
+	public void setTreeStruct(boolean isTreeStruct) {
+		this.isTreeStruct = isTreeStruct;
 	}
 
 	List<ProcSec> secList;
@@ -124,6 +125,60 @@ public class ProcedureDiv extends BaseDiv {
 			expandFlatToBranch(rootCmd);
 			// 分岐内分岐。２回目。
 			expandInBranch(rootCmd);
+		}
+		{
+			// set pair for PERFORM SECTION UNTIL
+			// search all cmd. select get(0) if branch.
+			setPairPerformUntil(rootCmd, new ArrayDeque<PerformUntilQue>());
+		}
+	}
+
+	/**
+	 * PERFORM 手続き名 UNTIL のコマンドをPairとして設定する。
+	 * 
+	 * @param cmd
+	 * @param que
+	 */
+	private void setPairPerformUntil(ExecCmd cmd, Deque<PerformUntilQue> que) {
+		if ((cmd.execSentence.length > 2 && KEY_PERFORM.equals(cmd.execSentence[0]))
+				&& (KEY_UNTIL.equals(cmd.execSentence[2])) && (searchSec(cmd.execSentence[1]) != null)) {
+			// PERFORM 手続き名 UNTILの場合はqueにcmdとSECTIONのEXIT文をpush
+			que.push(new PerformUntilQue(cmd, searchSec(cmd.execSentence[1]).exitSentence));
+		} else if (!que.isEmpty() && (que.peek().exitSentence.equals(cmd.execSentence))) {
+			// 現在の処理文がqueにあるEXIT文の場合は呼び出し側、EXIT側にpairをセット。
+			PerformUntilQue puQue = que.pop();
+			puQue.cmd.setPair(cmd);
+			cmd.setPair(puQue.cmd);
+		}
+		switch (cmd.nextList.size()) {
+		case 0:
+			logger.debug("reached bottom");
+			break;
+		case 1:
+			setPairPerformUntil(cmd.nextList.get(0).nextCmd, que);
+			break;
+		default:
+			for (NextCmd next : cmd.nextList) {
+				setPairPerformUntil(next.nextCmd, new ArrayDeque<PerformUntilQue>(que));
+			}
+		}
+	}
+
+	/**
+	 * PERFORM 手続き名 UNTILのpairを見つけるためのキューオブジェクト。
+	 * 
+	 * @author nakazawasugio
+	 *
+	 */
+	class PerformUntilQue {
+		/** 呼び出し側(PERFORM SECTION UNTIL)コマンド **/
+		ExecCmd cmd;
+		/** 呼び出すSECTIONのEXIT文のオブジェクト **/
+		String[] exitSentence;
+
+		PerformUntilQue(ExecCmd cmd, String[] exitSentence) {
+			this.cmd = cmd;
+			this.exitSentence = exitSentence;
 		}
 	}
 
@@ -707,7 +762,7 @@ public class ProcedureDiv extends BaseDiv {
 					+ addDotNode(nextValid(cmd.nextList.get(0).nextCmd), branch);
 		default:
 			for (NextCmd next : cmd.nextList) {
-				if (isNextExpand) {
+				if (isTreeStruct) {
 					nestCounter++;
 				}
 				writeDotRelation(cmd, branch, next);
@@ -748,8 +803,9 @@ public class ProcedureDiv extends BaseDiv {
 						+ Integer.toString(cmd.hashCode()) + Integer.toString(branch));
 			}
 		}
-		// pairノードがある場合には接続線を出力。
-		if ((cmd.getPair() != null) && (KEY_END_PERFORM.equals(cmd.execSentence[0]))) {
+		// pairノードがある場合には接続線を出力。二重に線を出力しないようにEND-PEROMFまたはEXITのときに出力。
+		if ((cmd.getPair() != null)
+				&& ((KEY_END_PERFORM.equals(cmd.execSentence[0])) || (KEY_EXIT.equals(cmd.execSentence[0])))) {
 			writeDotRec(Integer.toString(cmd.hashCode()) + Integer.toString(branch) + " -> "
 					+ Integer.toString(cmd.getPair().hashCode()) + Integer.toString(branch));
 		}

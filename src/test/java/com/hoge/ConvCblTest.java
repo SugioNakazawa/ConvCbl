@@ -124,7 +124,7 @@ public class ConvCblTest {
 			e.printStackTrace();
 			fail();
 		}
-		target.getProgram().procDiv.setNextExpand(true);
+		target.getProgram().procDiv.setTreeStruct(true);
 		target.getProgram().procDiv.outputDataDot(null);
 	}
 
