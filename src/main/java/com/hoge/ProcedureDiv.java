@@ -17,9 +17,6 @@ import com.hoge.ProcedureDiv.BranchCmd.BranchElm;
  * PROCEDURE DIVISION 解析。
  * 
  * @author nakazawasugio <br>
- *         課題１：以下のような場合にCLOSE文が１つにならない。 030800 CLOSE IN01-FILE 030900
- *         OT01-FILE.<br>
- * 
  */
 public class ProcedureDiv extends BaseDiv {
 	static Logger logger = LoggerFactory.getLogger(ProcedureDiv.class.getName());
@@ -27,13 +24,15 @@ public class ProcedureDiv extends BaseDiv {
 	static boolean LONG_LABEL = true;
 	/** DOT作成時に分岐を展開=true、合流=falseするかを指定する。 **/
 	private boolean isTreeStruct = false;
-	// 命令文
+	/** DOT作成時に UNTIL による戻り線を出力する。 **/
+	private boolean isReturnConnector = true;
+	// 予約語
 	private static final String KEY_EVALUATE = "EVALUATE";
 	private static final String KEY_IF = "IF";
 	private static final String KEY_READ = "READ";
 	/** 分岐命令 **/
 	private static String[] BRANCH_WORD_LIST = { KEY_EVALUATE, KEY_IF, KEY_READ };
-
+	// 命令
 	private static final String KEY_CLOSE = "CLOSE";
 	private static final String KEY_COMPUTE = "COMPUTE";
 	private static final String KEY_EXIT = "EXIT";
@@ -51,33 +50,44 @@ public class ProcedureDiv extends BaseDiv {
 	// 補助
 	private static final String KEY_AT = "AT";
 	private static final String KEY_END = "END";
-	private static final String KEY_FALSE = "FALSE";
 	private static final String KEY_NOT = "NOT";
-	private static final String KEY_OTHER = "OTHER";
 	private static final String KEY_PROGRAM = "PROGRAM";
-	private static final String KEY_TRUE = "TRUE";
 	private static final String KEY_UNTIL = "UNTIL";
-	private static final String KEY_VARYONG = "VARYING";
 	private static final String KEY_WHEN = "WHEN";
 	private static final String KEY_THEN = "THEN";
 	private static final String KEY_ELSE = "ELSE";
+	// not support
+	private static final String KEY_FALSE = "FALSE";
+	private static final String KEY_OTHER = "OTHER";
+	private static final String KEY_TRUE = "TRUE";
+	private static final String KEY_VARYONG = "VARYING";
 	/** DOTファイルに出力するCmdType。ここに指定したCmdのみを出力する。 **/
 	private static CmdType[] DOT_CMD_FILTER = { CmdType.BRANCH, CmdType.EXEC, CmdType.DEFINE, CmdType.LABEL };
 	/** ソース上にあらわれない場合に作成するコマンド **/
 	private static final String[] KEY_CONTINUE = { "continue" };
 
-	/** DOT作成時にネストするたびに加算し、条件違いのノードを別ノードとする。 **/
+	/** DOT作成時にネストするたびに加算し、条件違いのノードを別ノードとするために使用。 **/
 	private int nestCounter = 1;
 	/** DOTファイルを出力するWriter **/
 	private FileWriter dotFw = null;
 
-	public void setTreeStruct(boolean isTreeStruct) {
+	void setTreeStruct(boolean isTreeStruct) {
 		this.isTreeStruct = isTreeStruct;
+	}
+
+	void setReturnConnector(boolean isReturnConnector) {
+		this.isReturnConnector = isReturnConnector;
+	}
+
+	int getNestCounter() {
+		return nestCounter;
 	}
 
 	List<ProcSec> secList;
 	/** Cmdフローの先頭 **/
 	ExecCmd rootCmd;
+	/** cmdに付与するシーケンス **/
+	public int nodeSeq = 0;
 
 	public ProcedureDiv() {
 		super();
@@ -152,7 +162,7 @@ public class ProcedureDiv extends BaseDiv {
 		}
 		switch (cmd.nextList.size()) {
 		case 0:
-			logger.debug("reached bottom");
+//			logger.debug("reached bottom");
 			break;
 		case 1:
 			setPairPerformUntil(cmd.nextList.get(0).nextCmd, que);
@@ -553,21 +563,22 @@ public class ProcedureDiv extends BaseDiv {
 	/**
 	 * END-PERFORM コマンドには対応するPERFORM UNTIL へのペアを設定する。
 	 * 
-	 * @param exec
+	 * @param cmd
 	 */
-	private void doEndPerform(ExecCmd exec) {
-		ExecCmd prev = exec.prevCmd;
+	void doEndPerform(ExecCmd cmd) {
+		ExecCmd prev = cmd.prevCmd;
 		while (prev != null) {
 			if (prev.execSentence.length > 1) {
 				if (KEY_PERFORM.equals(prev.execSentence[0]) && KEY_UNTIL.equals(prev.execSentence[1])
 						&& prev.getPair() == null) {
-					exec.setPair(prev);
-					prev.setPair(exec);
+					cmd.setPair(prev);
+					prev.setPair(cmd);
 					return;
 				}
 			}
 			prev = prev.prevCmd;
 		}
+		throw new RuntimeException(Const.MSG_NOT_FOUND_PAIR_PERFORM_UNTIL);
 	}
 
 	/**
@@ -729,7 +740,7 @@ public class ProcedureDiv extends BaseDiv {
 		}
 		writeDotRec("strict digraph {");
 		{
-			writeDotRec(addDotNode(this.rootCmd, 1));
+			writeDotRec(addDotNode(this.rootCmd, 1, new ArrayDeque<String>()));
 		}
 		writeDotRec("}\n");
 		if (dotFw != null) {
@@ -746,29 +757,24 @@ public class ProcedureDiv extends BaseDiv {
 	 * @return 後続が追加されたノードを返す。次ノードがないとき、分岐が始まったときにDOTスクリプトを返す。。
 	 * @throws IOException
 	 */
-	private String addDotNode(ExecCmd cmd, int branch) throws IOException {
+	String addDotNode(ExecCmd cmd, int branch, Deque<String> que) throws IOException {
 		// CMDの出力
-		String execStr = cmd.execSentence[0];
-		if (LONG_LABEL) {
-			execStr = String.join(" ", cmd.execSentence);
-			execStr = execStr.replaceAll("\"", "");
-		}
-		writeDotNode(cmd, branch);
+		writeDotNode(cmd, branch, que);
 		switch (cmd.nextList.size()) {
 		case 0:
-			return Integer.toString(cmd.hashCode()) + Integer.toString(branch);
+			return cmd.getSeq() + Integer.toString(branch);
 		case 1:
-			return Integer.toString(cmd.hashCode()) + Integer.toString(branch) + " -> "
-					+ addDotNode(nextValid(cmd.nextList.get(0).nextCmd), branch);
+			return cmd.getSeq() + Integer.toString(branch) + " -> "
+					+ addDotNode(nextValid(cmd.nextList.get(0).nextCmd), branch, que);
 		default:
 			for (NextCmd next : cmd.nextList) {
 				if (isTreeStruct) {
 					nestCounter++;
 				}
 				writeDotRelation(cmd, branch, next);
-				writeDotRec(addDotNode(nextValid(next.nextCmd), nestCounter));
+				writeDotRec(addDotNode(nextValid(next.nextCmd), nestCounter, new ArrayDeque<String>(que)));
 			}
-			return Integer.toString(cmd.hashCode()) + Integer.toString(branch);
+			return cmd.getSeq() + Integer.toString(branch);
 		}
 	}
 
@@ -779,35 +785,41 @@ public class ProcedureDiv extends BaseDiv {
 	 * @param branch
 	 * @throws IOException
 	 */
-	private void writeDotNode(ExecCmd cmd, int branch) throws IOException {
+	private void writeDotNode(ExecCmd cmd, int branch, Deque<String> que) throws IOException {
 		String execStr = cmd.execSentence[0];
 		if (LONG_LABEL) {
-			execStr = String.join(" ", cmd.execSentence);
+			execStr = cmd.getSentenceStr();
 			execStr = execStr.replaceAll("\"", "");
 		}
 		// getSecNameByExitにてExitのときにはSECTION名を付与する。
-		writeDotRec(Integer.toString(cmd.hashCode()) + Integer.toString(branch) + " [label=\"" + execStr
+		writeDotRec(cmd.getSeq() + Integer.toString(branch) + " [label=\"" + execStr
 				+ getSecNameByExit(cmd.execSentence) + " " + cmd.type + "\"];");
 		// READ/WRITEのときはIOファイルを出力。
 		if (KEY_READ.equals(cmd.execSentence[0]) || KEY_WRITE.equals(cmd.execSentence[0])) {
 			// ファイルはボックスで出力
-			writeDotRec("io" + Integer.toString(cmd.hashCode()) + Integer.toString(branch) + " [label=\""
-					+ cmd.execSentence[1] + "\", shape = box ];");
+			writeDotRec("io" + cmd.getSeq() + Integer.toString(branch) + " [label=\"" + cmd.execSentence[1]
+					+ "\", shape = box ];");
 			if (KEY_READ.equals(cmd.execSentence[0])) {
 				// ファイルー＞コマンド
-				writeDotRec("io" + Integer.toString(cmd.hashCode()) + Integer.toString(branch) + " -> "
-						+ Integer.toString(cmd.hashCode()) + Integer.toString(branch));
+				writeDotRec("io" + cmd.getSeq() + Integer.toString(branch) + " -> " + cmd.getSeq()
+						+ Integer.toString(branch));
 			} else {
 				// コマンドー＞ファイル
-				writeDotRec(Integer.toString(cmd.hashCode()) + Integer.toString(branch) + " -> " + "io"
-						+ Integer.toString(cmd.hashCode()) + Integer.toString(branch));
+				writeDotRec(cmd.getSeq() + Integer.toString(branch) + " -> " + "io" + cmd.getSeq()
+						+ Integer.toString(branch));
 			}
 		}
-		// pairノードがある場合には接続線を出力。二重に線を出力しないようにEND-PEROMFまたはEXITのときに出力。
-		if ((cmd.getPair() != null)
-				&& ((KEY_END_PERFORM.equals(cmd.execSentence[0])) || (KEY_EXIT.equals(cmd.execSentence[0])))) {
-			writeDotRec(Integer.toString(cmd.hashCode()) + Integer.toString(branch) + " -> "
-					+ Integer.toString(cmd.getPair().hashCode()) + Integer.toString(branch));
+		if (isReturnConnector) {
+			// pairノードがある場合には接続線を出力。
+			if (cmd.getPair() != null) {
+				// 二重に線を出力しないようにEND-PEROMFまたはEXITのときに出力。接続先はスタックから取り出す。
+				if ((KEY_END_PERFORM.equals(cmd.execSentence[0])) || (KEY_EXIT.equals(cmd.execSentence[0]))) {
+					writeDotRec(cmd.getSeq() + Integer.toString(branch) + " -> " + que.pop());
+				} else {
+					// 戻り接続線の戻り先(PERFORM UNTIL)の場合には捨つ力ノード文字列をスタックに追加。
+					que.push(cmd.getSeq() + Integer.toString(branch));
+				}
+			}
 		}
 	}
 
@@ -820,12 +832,12 @@ public class ProcedureDiv extends BaseDiv {
 	 * @throws IOException
 	 */
 	private void writeDotRelation(ExecCmd cmd, int branch, NextCmd next) throws IOException {
-		writeDotRec(cmd.hashCode() + Integer.toString(branch) + " -> " + nextValid(next.nextCmd).hashCode()
+		writeDotRec(cmd.getSeq() + Integer.toString(branch) + " -> " + nextValid(next.nextCmd).getSeq()
 				+ Integer.toString(nestCounter) + " [label=\"" + next.condition + "\"]");
 
 	}
 
-	private ExecCmd nextValid(ExecCmd cmd) {
+	ExecCmd nextValid(ExecCmd cmd) {
 		ExecCmd next = cmd;// .nextList.get(0).nextCmd;
 		while (true) {
 			for (CmdType fil : DOT_CMD_FILTER) {
@@ -895,6 +907,7 @@ public class ProcedureDiv extends BaseDiv {
 	}
 
 	class ExecCmd {
+		int seq;
 		ExecCmd prevCmd;
 		List<NextCmd> nextList;
 		String[] execSentence;
@@ -902,10 +915,15 @@ public class ProcedureDiv extends BaseDiv {
 		private ExecCmd pair;
 
 		ExecCmd(ExecCmd prev, String[] sentence) {
+			this.seq = nodeSeq++;
 			this.prevCmd = prev;
 			this.nextList = new ArrayList<NextCmd>();
 			this.execSentence = sentence;
 			this.type = convType(sentence);
+		}
+
+		String getSeq() {
+			return Integer.toString(seq);
 		}
 
 		public String getSentenceStr() {

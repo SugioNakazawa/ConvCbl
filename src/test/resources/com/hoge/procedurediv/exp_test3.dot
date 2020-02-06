@@ -1,0 +1,27 @@
+strict digraph {
+01 [label="PROCEDURE DIVISION LABEL"];
+11 [label="PERFORM UNTIL KEY < HIGH-VALUE EXEC"];
+21 [label="READ IN-FILE01 BRANCH"];
+io21 [label="IN-FILE01", shape = box ];
+io21 -> 21
+21 -> 41 [label="NOT AT END"]
+41 [label="MOVE HIGH-VALUE TO KEY EXEC"];
+51 [label="WRITE OUT-FILE01 EXEC"];
+io51 [label="OUT-FILE01", shape = box ];
+51 -> io51
+61 [label="END-PERFORM EXEC"];
+61 -> 11
+71 [label="EXIT PROGRAM EXEC"];
+41 -> 51 -> 61 -> 71
+21 -> 31 [label="AT END"]
+31 [label="MOVE IN-A TO KEY EXEC"];
+51 [label="WRITE OUT-FILE01 EXEC"];
+io51 [label="OUT-FILE01", shape = box ];
+51 -> io51
+61 [label="END-PERFORM EXEC"];
+61 -> 11
+71 [label="EXIT PROGRAM EXEC"];
+31 -> 51 -> 61 -> 71
+01 -> 11 -> 21
+}
+

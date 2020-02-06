@@ -1,17 +1,30 @@
 package com.hoge;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayDeque;
+import java.util.Arrays;
+
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hoge.ProcedureDiv.BranchCmd;
+import com.hoge.ProcedureDiv.CmdType;
 import com.hoge.ProcedureDiv.ExecCmd;
 
 public class ProcedureDivTest {
-	static Logger logger = LoggerFactory.getLogger(ProcedureDiv.class.getName());
+	static Logger logger = LoggerFactory.getLogger(ProcedureDivTest.class.getName());
+	static String PATH = "src/test/resources/com/hoge/procedurediv";
 	ProcedureDiv proc;
+
+	@Rule
+	public TemporaryFolder tempFolder = new TemporaryFolder();
 
 	@Before
 	public void setUp() throws Exception {
@@ -193,5 +206,200 @@ public class ProcedureDivTest {
 		ExecCmd prev = null;
 		ExecCmd cmd = proc.new ExecCmd(prev, sentence);
 		proc.shrinkBranchSentence(cmd);
+	}
+
+	/**
+	 * isTreeStruct = true / false
+	 * 
+	 * @throws IOException
+	 */
+	@Test
+	public void testAddDotNode() throws IOException {
+		String[] sentence = { "MOVE", "A", "TO", "B" };
+		ExecCmd cmd = proc.new ExecCmd(null, sentence);
+		String actualHash = cmd.getSeq();
+
+		ExecCmd nextCmd1 = proc.new ExecCmd(cmd, sentence);
+		String actualNextHash1 = nextCmd1.getSeq();
+		String cond1 = "condition1";
+
+		ExecCmd nextCmd2 = proc.new ExecCmd(cmd, sentence);
+//		String actualNextHash2 = nextCmd2.getSeq();
+		String cond2 = "condition2";
+		{
+			// Next 0
+			String actual = proc.addDotNode(cmd, 1, null);
+			Assert.assertEquals(actualHash + "1", actual);
+		}
+		{
+			// Next 1
+			cmd.addNextCmd(nextCmd1, cond1);
+			String actual = proc.addDotNode(cmd, 1, null);
+			Assert.assertEquals(actualHash + "1 -> " + actualNextHash1 + "1", actual);
+		}
+		{
+			// Next 2 isTreeStruct=false
+			proc.setTreeStruct(false);
+			cmd.addNextCmd(nextCmd1, cond1);
+			cmd.addNextCmd(nextCmd2, cond2);
+			String actual = proc.addDotNode(cmd, 1, new ArrayDeque<String>());
+			Assert.assertEquals(actualHash + "1", actual);
+			Assert.assertEquals(1, proc.getNestCounter());
+		}
+		{
+			// Next 2 isTreeStruct=true
+			proc.setTreeStruct(true);
+			cmd.addNextCmd(nextCmd1, cond1);
+			cmd.addNextCmd(nextCmd2, cond2);
+			String actual = proc.addDotNode(cmd, 1, new ArrayDeque<String>());
+			Assert.assertEquals(actualHash + "1", actual);
+			Assert.assertEquals(6, proc.getNestCounter());
+		}
+	}
+
+	private void prepareDotData() {
+		// テストデータ作成
+		proc.nodeSeq = 0;
+		proc.rootCmd = proc.new ExecCmd(null, "PROCEDURE DIVISION".split(" "));
+		ExecCmd cmd1 = proc.new ExecCmd(proc.rootCmd, "PERFORM UNTIL KEY < HIGH-VALUE".split(" "));
+		ExecCmd cmd2 = proc.new ExecCmd(cmd1, "READ IN-FILE01".split(" "));
+		ExecCmd cmd21 = proc.new ExecCmd(cmd2, "MOVE IN-A TO KEY".split(" "));
+		ExecCmd cmd22 = proc.new ExecCmd(cmd2, "MOVE HIGH-VALUE TO KEY".split(" "));
+		ExecCmd cmd3 = proc.new ExecCmd(cmd21, "WRITE OUT-FILE01".split(" "));
+		ExecCmd cmd4 = proc.new ExecCmd(cmd3, "END-PERFORM".split(" "));
+		ExecCmd cmd5 = proc.new ExecCmd(cmd4, "EXIT PROGRAM".split(" "));
+		cmd1.setPair(cmd4);
+		cmd4.setPair(cmd1);
+		cmd4.addNextCmd(cmd5, "no");
+		cmd3.addNextCmd(cmd4, "no");
+		cmd22.addNextCmd(cmd3, "no");
+		cmd21.addNextCmd(cmd3, "no");
+		cmd2.addNextCmd(cmd22, "NOT AT END");
+		cmd2.addNextCmd(cmd21, "AT END");
+		cmd1.addNextCmd(cmd2, "no");
+		proc.rootCmd.addNextCmd(cmd1, "no");
+	}
+
+	/**
+	 * isReturnConnector true / false
+	 * 
+	 * @throws IOException
+	 */
+	@Test
+	public void testIsReturnConnector1() throws IOException {
+		prepareDotData();
+		{
+			proc.setTreeStruct(true);
+			proc.setReturnConnector(true);
+			String expFile = PATH + "/exp_test1.dot";
+			String actFile = tempFolder.getRoot().getAbsolutePath() + "/test.dot";
+//			actFile = "out" + "/test.dot";
+			// 実行
+			proc.outputDataDot(actFile);
+			// FILE CHECK
+			Assert.assertTrue(
+					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
+		}
+	}
+
+	@Test
+	public void testIsReturnConnector2() throws IOException {
+		prepareDotData();
+		{
+			proc.setTreeStruct(true);
+			proc.setReturnConnector(false);
+			String expFile = PATH + "/exp_test2.dot";
+			String actFile = tempFolder.getRoot().getAbsolutePath() + "/test.dot";
+//			actFile = "out" + "/test.dot";
+			// 実行
+			proc.outputDataDot(actFile);
+			// FILE CHECK
+			Assert.assertTrue(
+					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
+		}
+	}
+
+	@Test
+	public void testIsReturnConnector3() throws IOException {
+		prepareDotData();
+		{
+			proc.setTreeStruct(false);
+			proc.setReturnConnector(true);
+			String expFile = PATH + "/exp_test3.dot";
+			String actFile = tempFolder.getRoot().getAbsolutePath() + "/test.dot";
+//			actFile = "out" + "/test.dot";
+			// 実行
+			proc.outputDataDot(actFile);
+			// FILE CHECK
+			Assert.assertTrue(
+					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
+		}
+	}
+
+	@Test
+	public void testIsReturnConnector4() throws IOException {
+		prepareDotData();
+		{
+			proc.setTreeStruct(false);
+			proc.setReturnConnector(false);
+			String expFile = PATH + "/exp_test4.dot";
+			String actFile = tempFolder.getRoot().getAbsolutePath() + "/test.dot";
+//			actFile = "out" + "/test.dot";
+			// 実行
+			proc.outputDataDot(actFile);
+			// FILE CHECK
+			Assert.assertTrue(
+					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
+		}
+	}
+
+	@Test
+	public void testDoEndPerform() {
+		proc.nodeSeq = 0;
+		ExecCmd cmd0 = proc.new ExecCmd(null, "PROCEDURE DIVISION".split(" "));
+		ExecCmd cmd1 = proc.new ExecCmd(cmd0, "PERFORM UNTIL A < B".split(" "));
+		ExecCmd cmd2 = proc.new ExecCmd(cmd1, "MOVE A TO B".split(" "));
+		ExecCmd cmd3 = proc.new ExecCmd(cmd2, "END-PERFORM".split(" "));
+		cmd0.addNextCmd(cmd1, "no");
+		cmd1.addNextCmd(cmd2, "no");
+		cmd2.addNextCmd(cmd3, "no");
+
+		proc.doEndPerform(cmd3);
+
+		Assert.assertEquals(cmd3, cmd1.getPair());
+		Assert.assertEquals(cmd1, cmd3.getPair());
+	}
+
+	/**
+	 * 対応するPERFORMがないEND-PERFORMのケース。
+	 */
+	@Test
+	public void testDoEndPerformError() {
+		proc.nodeSeq = 0;
+		ExecCmd cmd0 = proc.new ExecCmd(null, "PROCEDURE DIVISION".split(" "));
+		ExecCmd cmd1 = proc.new ExecCmd(proc.rootCmd, "END-PERFORM".split(" "));
+		cmd0.addNextCmd(cmd1, "no");
+		try {
+			proc.doEndPerform(cmd1);
+		} catch (Exception e) {
+			Assert.assertEquals(Const.MSG_NOT_FOUND_PAIR_PERFORM_UNTIL, e.getMessage());
+		}
+	}
+
+	@Test
+	public void testNextValid() {
+		proc.nodeSeq = 0;
+		ExecCmd cmd0 = proc.new ExecCmd(null, "PROCEDURE DIVISION".split(" "));
+		ExecCmd cmd1 = proc.new ExecCmd(cmd0, "PERFORM UNTIL A < B".split(" "));
+		ExecCmd cmd2 = proc.new ExecCmd(cmd1, "SKIP SENTENCE".split(" "), CmdType.OTHER);
+		ExecCmd cmd3 = proc.new ExecCmd(cmd2, "END-PERFORM".split(" "));
+		ExecCmd cmd4 = proc.new ExecCmd(cmd3, "SKIP SENTENCE".split(" "), CmdType.OTHER);
+		cmd0.addNextCmd(cmd1, "no");
+		cmd1.addNextCmd(cmd2, "no");
+		cmd2.addNextCmd(cmd3, "no");
+		cmd3.addNextCmd(cmd4, "no");
+
+		Assert.assertEquals(cmd3, proc.nextValid(cmd2));
+		Assert.assertEquals(cmd4, proc.nextValid(cmd4));
 	}
 }

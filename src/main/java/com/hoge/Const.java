@@ -15,6 +15,7 @@ public class Const {
 	static final String KEY_DIVISION = "DIVISION";
 	static final String KEY_SECTION = "SECTION";
 	// メッセージ
-	static String MSG_NO_FILE_PARAM = "入力ファイルが指定されていません。";
-	static String MSG_NO_FILE = "指定ファイルが存在しません。";
+	static final String MSG_NO_FILE_PARAM = "入力ファイルが指定されていません。";
+	static final String MSG_NO_FILE = "指定ファイルが存在しません。";
+	static final String MSG_NOT_FOUND_PAIR_PERFORM_UNTIL = "END-PERFORM の前に対応するPERFORM UNTILがありません。";
 }
