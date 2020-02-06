@@ -37,7 +37,7 @@ public class DataDiv extends BaseDiv {
 
 	/** COBOLソースのフルパス **/
 	private String filePath;
-	private String fileName;
+	private String fileId;
 	/** FILE SECTION の定義内容 **/
 	private List<FdRec> fdList;
 	/** WORKING-STORAGE SECTION の定義内容 **/
@@ -48,7 +48,7 @@ public class DataDiv extends BaseDiv {
 	/**
 	 * コンストラクタ。
 	 * 
-	 * @param fileName COBOLソースファイルのフルパス。COPY句が同じディレクトrにあると想定。
+	 * @param fileId COBOLソースファイルのフルパス。COPY句が同じディレクトrにあると想定。
 	 */
 	public DataDiv(String filePath) {
 		super();
@@ -58,14 +58,14 @@ public class DataDiv extends BaseDiv {
 		if (tmp.indexOf(".") > 0) {
 			tmp = tmp.substring(0, tmp.lastIndexOf("."));
 		}
-		this.fileName = tmp;
+		this.fileId = tmp;
 		this.fdList = new ArrayList<FdRec>();
 		this.wsList = new ArrayList<WsRec>();
 		this.lkList = new ArrayList<LkRec>();
 	}
 
 	public String getFileName() {
-		return fileName;
+		return fileId;
 	}
 
 	public List<FdRec> getFdList() {
@@ -156,7 +156,7 @@ public class DataDiv extends BaseDiv {
 	}
 
 	public void createDmdl(String path) throws IOException {
-		AsakusaDmdl target = new AsakusaDmdl(this.fileName);
+		AsakusaDmdl target = new AsakusaDmdl(this.fileId);
 		for (FdRec fd : fdList) {
 			DmdlModel model = target.new DmdlModel(fd.recName, fd.recName, "file", "UTF-8");
 			for (FdCol col : fd.getFdColList()) {

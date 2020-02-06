@@ -733,7 +733,7 @@ public class ProcedureDiv extends BaseDiv {
 	 * @param filePath ファイルパス。nullのときはINFOログへ出力。
 	 * @throws IOException
 	 */
-	public void outputDataDot(String filePath) throws IOException {
+	void outputDataDot(String filePath) throws IOException {
 		if (filePath != null) {
 			File file = new File(filePath);
 			dotFw = new FileWriter(file);

@@ -8,6 +8,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 
@@ -16,7 +17,9 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,6 +30,9 @@ import org.slf4j.LoggerFactory;
 public class ConvCblTest {
 	static Logger logger = LoggerFactory.getLogger(ConvCblTest.class.getName());
 	static String PATH = "src/test/resources/com/hoge/convcbl";
+
+	@Rule
+	public TemporaryFolder tempFolder = new TemporaryFolder();
 
 	/**
 	 * @throws java.lang.Exception
@@ -67,6 +73,34 @@ public class ConvCblTest {
 		} catch (Exception e) {
 			e.printStackTrace();
 			fail();
+		}
+	}
+
+	@Test
+	public void testMainOutDmdlDot() throws IOException {
+		String output = this.tempFolder.getRoot().getAbsolutePath();
+//		output = "out";
+		{
+			String[] args = { "-i", "src/test/resources/com/hoge/convcbl/sample01.cbl", //
+					"-o", output, "-t", "dmdl", "-t", "dot" };
+			ConvCbl.main(args);
+			// ls
+			Files.list(Paths.get(output)).forEach(System.out::println);
+			// check exist
+			Assert.assertTrue(Files.exists(Paths.get(output + "/sample01.dmdl")));
+			Assert.assertTrue(Files.exists(Paths.get(output + "/sample01.dot")));
+		}
+	}
+	@Test
+	public void testMainOutDot() throws IOException {
+		String output = this.tempFolder.getRoot().getAbsolutePath();
+		{
+			String[] args = { "-i", "src/test/resources/com/hoge/convcbl/sample01.cbl", //
+					"-o", output, "-t", "dot" };
+			ConvCbl.main(args);
+			// check exist
+			Assert.assertFalse(Files.exists(Paths.get(output + "/sample01.dmdl")));
+			Assert.assertTrue(Files.exists(Paths.get(output + "/sample01.dot")));
 		}
 	}
 
