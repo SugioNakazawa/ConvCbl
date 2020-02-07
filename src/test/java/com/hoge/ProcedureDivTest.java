@@ -239,7 +239,7 @@ public class ProcedureDivTest {
 		}
 		{
 			// Next 2 isTreeStruct=false
-			proc.setTreeStruct(false);
+			proc.setForkedMerge(true);
 			cmd.addNextCmd(nextCmd1, cond1);
 			cmd.addNextCmd(nextCmd2, cond2);
 			String actual = proc.addDotNode(cmd, 1, new ArrayDeque<String>());
@@ -248,7 +248,7 @@ public class ProcedureDivTest {
 		}
 		{
 			// Next 2 isTreeStruct=true
-			proc.setTreeStruct(true);
+			proc.setForkedMerge(false);
 			cmd.addNextCmd(nextCmd1, cond1);
 			cmd.addNextCmd(nextCmd2, cond2);
 			String actual = proc.addDotNode(cmd, 1, new ArrayDeque<String>());
@@ -281,21 +281,21 @@ public class ProcedureDivTest {
 	}
 
 	/**
-	 * isReturnConnector true / false
+	 * return connector true / false
 	 * 
 	 * @throws IOException
 	 */
 	@Test
-	public void testIsReturnConnector1() throws IOException {
+	public void testReturnArrlow1() throws IOException {
 		prepareDotData();
 		{
-			proc.setTreeStruct(true);
-			proc.setReturnConnector(true);
+			proc.setForkedMerge(false);
+			proc.setReturnArrow(true);
 			String expFile = PATH + "/exp_test1.dot";
 			String actFile = tempFolder.getRoot().getAbsolutePath() + "/test.dot";
 //			actFile = "out" + "/test.dot";
 			// 実行
-			proc.outputDataDot(actFile);
+			proc.outputDataDot(Paths.get(actFile));
 			// FILE CHECK
 			Assert.assertTrue(
 					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
@@ -303,16 +303,15 @@ public class ProcedureDivTest {
 	}
 
 	@Test
-	public void testIsReturnConnector2() throws IOException {
+	public void testReturnArrlow2() throws IOException {
 		prepareDotData();
 		{
-			proc.setTreeStruct(true);
-			proc.setReturnConnector(false);
+			proc.setForkedMerge(false);
+			proc.setReturnArrow(false);
 			String expFile = PATH + "/exp_test2.dot";
 			String actFile = tempFolder.getRoot().getAbsolutePath() + "/test.dot";
-//			actFile = "out" + "/test.dot";
 			// 実行
-			proc.outputDataDot(actFile);
+			proc.outputDataDot(Paths.get(actFile));
 			// FILE CHECK
 			Assert.assertTrue(
 					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
@@ -320,16 +319,15 @@ public class ProcedureDivTest {
 	}
 
 	@Test
-	public void testIsReturnConnector3() throws IOException {
+	public void testReturnArrlow3() throws IOException {
 		prepareDotData();
 		{
-			proc.setTreeStruct(false);
-			proc.setReturnConnector(true);
+			proc.setForkedMerge(true);
+			proc.setReturnArrow(true);
 			String expFile = PATH + "/exp_test3.dot";
 			String actFile = tempFolder.getRoot().getAbsolutePath() + "/test.dot";
-//			actFile = "out" + "/test.dot";
 			// 実行
-			proc.outputDataDot(actFile);
+			proc.outputDataDot(Paths.get(actFile));
 			// FILE CHECK
 			Assert.assertTrue(
 					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));
@@ -337,16 +335,15 @@ public class ProcedureDivTest {
 	}
 
 	@Test
-	public void testIsReturnConnector4() throws IOException {
+	public void testReturnArrlow4() throws IOException {
 		prepareDotData();
 		{
-			proc.setTreeStruct(false);
-			proc.setReturnConnector(false);
+			proc.setForkedMerge(true);
+			proc.setReturnArrow(false);
 			String expFile = PATH + "/exp_test4.dot";
 			String actFile = tempFolder.getRoot().getAbsolutePath() + "/test.dot";
-//			actFile = "out" + "/test.dot";
 			// 実行
-			proc.outputDataDot(actFile);
+			proc.outputDataDot(Paths.get(actFile));
 			// FILE CHECK
 			Assert.assertTrue(
 					Arrays.equals(Files.readAllBytes(Paths.get(expFile)), Files.readAllBytes(Paths.get(actFile))));

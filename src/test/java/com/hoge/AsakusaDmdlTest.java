@@ -15,7 +15,7 @@ public class AsakusaDmdlTest {
 
 	@Test
 	public void testAsakusaDmdl() throws IOException {
-		AsakusaDmdl target = new AsakusaDmdl("sample");
+		AsakusaDmdl target = new AsakusaDmdl();
 		{
 			DmdlModel model = target.new DmdlModel("model1", "モデル1", "file", "UTF-8");
 			model.addColumn(target.new DmdlColumn("column_key", "TEXT", "キー１"));
@@ -32,7 +32,7 @@ public class AsakusaDmdlTest {
 			model.addColumn(target.new DmdlColumn("column_value", "TEXT", "値１"));
 			target.addModel(model);
 		}
-		target.createDmdl("out");
+		target.createDmdl(Paths.get("out/sample.dot"));
 		String fileA = PATH + "/exp_sample.dmdl";
 		String fileB = "out/sample.dmdl";
 		Assert.assertTrue(Arrays.equals(Files.readAllBytes(Paths.get(fileA)), Files.readAllBytes(Paths.get(fileB))));

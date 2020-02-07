@@ -3,8 +3,10 @@
  */
 package com.hoge;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.List;
 
@@ -12,6 +14,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
@@ -23,14 +26,30 @@ import org.slf4j.LoggerFactory;
  */
 public class ConvCbl {
 	static Logger logger = LoggerFactory.getLogger(ConvCbl.class.getName());
-
-	private String inFile;
-	private String outDir;
+	/** 入力ソースファイル **/
+	private Path sourceFile;
+	/** 出力ディレクトリ **/
+	private Path outDir;
+	/** 出力タイプ **/
 	List<String> outTypeList;
+	/** 分岐合流フラグ **/
+	private boolean forkedMerge = true;
+	/** 戻り線 **/
+	private boolean returnArrow = true;
+
 	private CblProgram program;
 
-	public ConvCbl() {
-		outTypeList = Arrays.asList("dmdl");
+	public ConvCbl(Path sourceFile) {
+		this.sourceFile = sourceFile;
+		this.outTypeList = Arrays.asList("dmdl");
+	}
+
+	CblProgram getProgram() {
+		return program;
+	}
+
+	private ConvCbl() {
+
 	}
 
 	/**
@@ -41,9 +60,15 @@ public class ConvCbl {
 	 */
 	public static void main(String[] args) throws IOException {
 		Options options = new Options();
-		options.addOption("i", "infile", true, "入力ファイル");
-		options.addOption("o", "outdir", true, "出力ディレクトリ");
-		options.addOption("t", "type", true, "出力ファイルのタイプ");
+		options.addOption("i", "infile", true, "入力ファイル。");
+		options.addOption("o", "outdir", true, "出力ディレクトリ。default:out");
+//		options.addOption("t", "type", true, "出力ファイルのタイプ。複数可。 [dmdl, dot]");
+		options.addOption(Option.builder("t").longOpt("type").required(false).hasArgs()
+				.desc("出力ファイルのタイプ。複数可。 [dmdl, dot]").build());
+		options.addOption(Option.builder().longOpt("nomerge").required(false).hasArg(false)
+				.desc("DOTファイルの分岐後合流をしない。 default:する").build());
+		options.addOption(Option.builder().longOpt("noreturn").required(false).hasArg(false)
+				.desc("DOTファイルの戻り線。 default:する").build());
 		HelpFormatter hf = new HelpFormatter();
 
 		CommandLineParser parser = new DefaultParser();
@@ -61,43 +86,29 @@ public class ConvCbl {
 			hf.printHelp("[opts]", options);
 			throw (e);
 		}
-		try {
-			obj.exec(cmd.getOptionValues("i")[0]);
-		} catch (IOException e) {
-			logger.error(Const.MSG_NO_FILE);
-			throw (e);
-		}
+		// 実行
+		obj.exec();
 	}
 
-	void exec(String cblSourceFileName) throws IOException {
-		program = new CblProgram(cblSourceFileName);
+	void exec() throws IOException {
+		program = new CblProgram(sourceFile);
 		program.read();
 		program.analyze();
 		if (outTypeList.contains("dmdl")) {
 			program.createDmdl(outDir);
 		}
 		if (outTypeList.contains("dot")) {
-			//	TODO	ファイル名とディレクトリ名の整理が必要
-			String[] filePathSplit = cblSourceFileName.split("/");
-			String tmp = filePathSplit[filePathSplit.length - 1];
-			if (tmp.indexOf(".") > 0) {
-				tmp = tmp.substring(0, tmp.lastIndexOf("."));
-			}
-			program.procDiv.outputDataDot(outDir + "/" + tmp + ".dot");
+			program.outputDataDot(outDir, forkedMerge, returnArrow);
 		}
 		program.logout();
 	}
 
-	public String getOutDir() {
+	public Path getOutDir() {
 		return outDir;
 	}
 
-	public void setOutDir(String outDir) {
+	public void setOutDir(Path outDir) {
 		this.outDir = outDir;
-	}
-
-	public CblProgram getProgram() {
-		return program;
 	}
 
 	private void setParams(CommandLine cmd) {
@@ -106,20 +117,42 @@ public class ConvCbl {
 			logger.error(Const.MSG_NO_FILE_PARAM);
 			throw new IllegalArgumentException(Const.MSG_NO_FILE_PARAM);
 		} else {
-			inFile = cmd.getOptionValues("i")[0];
+			sourceFile = Paths.get(cmd.getOptionValues("i")[0]);
+			if (!sourceFile.toFile().isFile() || !sourceFile.toFile().exists()) {
+				String msg = MessageFormat.format(Const.MSG_NO_FILE, sourceFile.toString());
+				logger.error(msg);
+				throw new IllegalArgumentException(msg);
+			}
 		}
 		// 出力ディレクトリ
 		if (!cmd.hasOption("o")) {
-			outDir = "out";
+			outDir = Paths.get("out");
 		} else {
-			outDir = cmd.getOptionValues("o")[0];
+			outDir = Paths.get(cmd.getOptionValues("o")[0]);
+		}
+		if (!outDir.toFile().isDirectory()) {
+			String msg = MessageFormat.format(Const.MSG_NO_DIR, outDir.toString());
+			logger.error(msg);
+			throw new IllegalArgumentException(msg);
 		}
 		// 出力タイプ デフォルトはdmdl
 		if (cmd.hasOption("t")) {
 			outTypeList = Arrays.asList(cmd.getOptionValues("t"));
+		} else {
+			outTypeList = Arrays.asList("dmdl");
 		}
-		logger.info("入力ファイル　" + inFile);
+		// 分岐後合流
+		if (cmd.hasOption("nomerge")) {
+			this.forkedMerge = false;
+		}
+		// 戻り線
+		if (cmd.hasOption("noreturn")) {
+			this.returnArrow = false;
+		}
+		logger.info("入力ファイル　" + sourceFile);
 		logger.info("出力ディレクトリ " + outDir);
 		logger.info("出力ファイルタイプ " + outTypeList);
+		logger.info("DOT出力：分岐後の合流 " + forkedMerge);
+		logger.info("DOT出力：戻り線出力 " + returnArrow);
 	}
 }

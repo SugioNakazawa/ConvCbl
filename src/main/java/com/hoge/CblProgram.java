@@ -1,6 +1,8 @@
 package com.hoge;
 
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,34 +13,44 @@ public class CblProgram {
 	static Logger logger = LoggerFactory.getLogger(CblProgram.class.getName());
 
 	private List<String[]> recList;
-
-	private String fileName;
+	/** COBOLソース・ファイル **/
+	private Path sourceFile;
+	/** プログラムID（ソースファイルの拡張子除外） **/
+	private String programId;
 	IdentificationDiv idDiv;
 	EnvironmentDiv envDiv;
 	DataDiv dataDiv;
 	ProcedureDiv procDiv;
 
-	public CblProgram(String fileName) {
-		this.fileName = fileName;
+	public CblProgram(Path sourceFile) {
+		this.sourceFile = sourceFile;
 		recList = new ArrayList<String[]>();
 		idDiv = new IdentificationDiv();
 		envDiv = new EnvironmentDiv();
-		dataDiv = new DataDiv(fileName);
+		dataDiv = new DataDiv(sourceFile);
 		procDiv = new ProcedureDiv();
+		// 拡張子外し
+		String fileName = sourceFile.getFileName().toString();
+		int point = fileName.lastIndexOf(".");
+		if (point != -1) {
+			programId = fileName.substring(0, point);
+		} else {
+			programId = fileName;
+		}
 	}
 
 	@SuppressWarnings("unused")
 	private CblProgram() {
 	}
 
-	public String getFileName() {
-		return this.fileName;
-	}
-
+//	public String getFileName() {
+//		return this.fileName;
+//	}
+//
 	public void read() throws IOException {
-		CblSourceReader reader = new CblSourceReader(fileName);
+		CblSourceReader reader = new CblSourceReader(sourceFile);
 		recList = reader.read();
-		logger.info("read " + fileName + " " + recList.size() + " lines.");
+		logger.info("read " + sourceFile.getFileName() + " " + recList.size() + " lines.");
 	}
 
 	void analyze() {
@@ -75,7 +87,7 @@ public class CblProgram {
 	}
 
 	public void logout() {
-		logger.info("fileName : " + fileName);
+		logger.info("fileName : " + sourceFile.toAbsolutePath().toString());
 
 		logger.info(idDiv.getStat(Const.KEY_IDENTIFICATION + " " + Const.KEY_DIVISION));
 		logger.info(envDiv.getStat(Const.KEY_ENVIRONMENT + " " + Const.KEY_DIVISION));
@@ -90,7 +102,13 @@ public class CblProgram {
 	 * @param outDir DMDL出力ディレクトリ。
 	 * @throws IOException
 	 */
-	public void createDmdl(String outDir) throws IOException {
-		this.dataDiv.createDmdl(outDir);
+	public void createDmdl(Path outDir) throws IOException {
+		this.dataDiv.createDmdl(Paths.get(outDir.toString() + "/" + programId + ".dmdl"));
+	}
+
+	public void outputDataDot(Path outDir,boolean forkedMerge,boolean returnArrow) throws IOException {
+		procDiv.setForkedMerge(forkedMerge);
+		procDiv.setReturnArrow(returnArrow);
+		procDiv.outputDataDot(Paths.get(outDir.toString() + "/" + programId + ".dot"));
 	}
 }

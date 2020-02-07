@@ -2,6 +2,7 @@ package com.hoge;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.MessageFormat;
 import java.util.Arrays;
@@ -19,7 +20,7 @@ public class DataDivTest {
 
 	@Test
 	public void testCopy() throws IOException {
-		program = new CblProgram(PATH + "/convcbl/sample01.cbl");
+		program = new CblProgram(Paths.get(PATH + "/convcbl/sample01.cbl"));
 		program.read();
 		program.analyze();
 		DataDiv dataDiv = program.dataDiv;
@@ -55,37 +56,40 @@ public class DataDivTest {
 
 	@Test
 	public void testCreateDmdl() throws IOException {
-		program = new CblProgram(PATH + "/datadiv/sample01.cbl");
+		program = new CblProgram(Paths.get(PATH + "/datadiv/sample01.cbl"));
 		program.read();
 		program.analyze();
-		program.dataDiv.createDmdl("out");
+		program.dataDiv.createDmdl(Paths.get("out/sample01.dot"));
 
 		String fileA = PATH + "/datadiv/exp_sample01.dmdl";
-		String fileB = "out/" + program.dataDiv.getFileName() + ".dmdl";
+		String fileB = "out/sample01.dmdl";
 		Assert.assertTrue(Arrays.equals(Files.readAllBytes(Paths.get(fileA)), Files.readAllBytes(Paths.get(fileB))));
 	}
 
 	@Test
 	public void testCopyError1() throws IOException {
 		try {
-			program = new CblProgram(PATH + "/datadiv/error01.cbl");
+			program = new CblProgram(Paths.get(PATH + "/datadiv/error01.cbl"));
 			program.read();
 			program.analyze();
 			Assert.fail();
 		} catch (Exception e) {
-			Assert.assertEquals(DataDiv.MSG_NO_SUPPORT, e.getMessage());
+			Assert.assertEquals(Const.MSG_NO_SUPPORT, e.getMessage());
 		}
 	}
 
 	@Test
 	public void testCopyError2() throws IOException {
+		Path path = Paths.get(PATH + "/datadiv/error02.cbl");
 		try {
-			program = new CblProgram(PATH + "/datadiv/error02.cbl");
+			program = new CblProgram(path);
 			program.read();
 			program.analyze();
 			Assert.fail();
 		} catch (Exception e) {
-			Assert.assertEquals(MessageFormat.format(DataDiv.MSG_NOT_FOUND_COPY, "ZZZ001"), e.getMessage());
+			Assert.assertEquals(
+					MessageFormat.format(Const.MSG_NOT_FOUND_COPY, path.getParent().toAbsolutePath() + "/ZZZ001"),
+					e.getMessage());
 		}
 	}
 }

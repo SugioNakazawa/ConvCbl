@@ -7,7 +7,7 @@ public class ComUtilTest {
 
 	@Test
 	public void testNormal() {
-		ComUtil com = new ComUtil();
+		new ComUtil();
 		// for test
 	}
 

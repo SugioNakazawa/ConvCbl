@@ -1,8 +1,8 @@
 package com.hoge;
 
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,11 +24,11 @@ public class AsakusaDmdl {
 	static final String SP4 = "    ";
 
 	/** データモデル名称 **/
-	private String fileName;
+//	private String fileName;
 	List<DmdlModel> modelList;
 
-	public AsakusaDmdl(String fileName) {
-		this.fileName = fileName;
+	public AsakusaDmdl() {
+//		this.fileName = fileName;
 		this.modelList = new ArrayList<DmdlModel>();
 	}
 
@@ -39,12 +39,11 @@ public class AsakusaDmdl {
 	/**
 	 * DMDLファイルの作成。
 	 * 
-	 * @param path 出力するディレクトリ。
+	 * @param outFile 出力するディレクトリ。
 	 * @throws IOException
 	 */
-	public void createDmdl(String path) throws IOException {
-		File file = new File(path + "/" + fileName + ".dmdl");
-		FileWriter fw = new FileWriter(file);
+	public void createDmdl(Path outFile) throws IOException {
+		FileWriter fw = new FileWriter(outFile.toFile());
 		for (DmdlModel model : modelList) {
 			fw.write(MessageFormat.format(MODEL_DESC, model.desc));
 			fw.write(MessageFormat.format(NAME_SPACE_REC, model.namespace));
@@ -57,7 +56,7 @@ public class AsakusaDmdl {
 			fw.write("};\n\n"); // end-name
 		}
 		fw.close();
-		logger.info("created dmdl " + file.getAbsolutePath());
+		logger.info("created dmdl " + outFile.toAbsolutePath().toString());
 	}
 
 	class DmdlModel {

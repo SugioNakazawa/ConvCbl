@@ -7,9 +7,9 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.MessageFormat;
 import java.util.Arrays;
 
 import org.junit.After;
@@ -70,6 +70,7 @@ public class ConvCblTest {
 		String[] args = { "-i", "src/test/resources/com/hoge/convcbl/sample01.cbl", "-o", "out" };
 		try {
 			ConvCbl.main(args);
+			Assert.assertEquals(84, Files.readAllLines(Paths.get("out/sample01.dmdl")).size());
 		} catch (Exception e) {
 			e.printStackTrace();
 			fail();
@@ -79,18 +80,67 @@ public class ConvCblTest {
 	@Test
 	public void testMainOutDmdlDot() throws IOException {
 		String output = this.tempFolder.getRoot().getAbsolutePath();
-//		output = "out";
 		{
 			String[] args = { "-i", "src/test/resources/com/hoge/convcbl/sample01.cbl", //
-					"-o", output, "-t", "dmdl", "-t", "dot" };
+					"-o", output, "-t", "dmdl", "dot" };
 			ConvCbl.main(args);
 			// ls
 			Files.list(Paths.get(output)).forEach(System.out::println);
 			// check exist
-			Assert.assertTrue(Files.exists(Paths.get(output + "/sample01.dmdl")));
-			Assert.assertTrue(Files.exists(Paths.get(output + "/sample01.dot")));
+			Assert.assertEquals(84, Files.readAllLines(Paths.get(output + "/sample01.dmdl")).size());
+			Assert.assertEquals(447, Files.readAllLines(Paths.get(output + "/sample01.dot")).size());
+			Assert.assertEquals(19745, Files.size(Paths.get(output + "/sample01.dot")));
 		}
 	}
+
+	@Test
+	public void testMainNomerge() throws IOException {
+		String output = this.tempFolder.getRoot().getAbsolutePath();
+		{
+			String[] args = { "-i", "src/test/resources/com/hoge/convcbl/sample01.cbl", //
+					"-o", output, "-t", "dmdl", "dot", "--nomerge" };
+			ConvCbl.main(args);
+			// ls
+			Files.list(Paths.get(output)).forEach(System.out::println);
+			// check exist
+			Assert.assertEquals(84, Files.readAllLines(Paths.get(output + "/sample01.dmdl")).size());
+			Assert.assertEquals(447, Files.readAllLines(Paths.get(output + "/sample01.dot")).size());
+			Assert.assertEquals(20238, Files.size(Paths.get(output + "/sample01.dot")));
+		}
+	}
+
+	@Test
+	public void testMainNoreturn() throws IOException {
+		String output = this.tempFolder.getRoot().getAbsolutePath();
+		{
+			String[] args = { "-i", "src/test/resources/com/hoge/convcbl/sample01.cbl", //
+					"-o", output, "-t", "dmdl", "dot", "--noreturn" };
+			ConvCbl.main(args);
+			// ls
+			Files.list(Paths.get(output)).forEach(System.out::println);
+			// check exist
+			Assert.assertEquals(84, Files.readAllLines(Paths.get(output + "/sample01.dmdl")).size());
+			Assert.assertEquals(435, Files.readAllLines(Paths.get(output + "/sample01.dot")).size());
+			Assert.assertEquals(19613, Files.size(Paths.get(output + "/sample01.dot")));
+		}
+	}
+
+	@Test
+	public void testMainNomergeNoreturn() throws IOException {
+		String output = this.tempFolder.getRoot().getAbsolutePath();
+		{
+			String[] args = { "-i", "src/test/resources/com/hoge/convcbl/sample01.cbl", //
+					"-o", output, "-t", "dmdl", "dot", "--nomerge", "--noreturn" };
+			ConvCbl.main(args);
+			// ls
+			Files.list(Paths.get(output)).forEach(System.out::println);
+			// check exist
+			Assert.assertEquals(84, Files.readAllLines(Paths.get(output + "/sample01.dmdl")).size());
+			Assert.assertEquals(435, Files.readAllLines(Paths.get(output + "/sample01.dot")).size());
+			Assert.assertEquals(20092, Files.size(Paths.get(output + "/sample01.dot")));
+		}
+	}
+
 	@Test
 	public void testMainOutDot() throws IOException {
 		String output = this.tempFolder.getRoot().getAbsolutePath();
@@ -123,11 +173,37 @@ public class ConvCblTest {
 		try {
 			ConvCbl.main(args);
 			fail();
-		} catch (NoSuchFileException nsfe) {
-			Assert.assertEquals("nofile.cbl", nsfe.getMessage());
+		} catch (IllegalArgumentException iae) {
+			Assert.assertEquals(MessageFormat.format(Const.MSG_NO_FILE, "nofile.cbl"), iae.getMessage());
 		} catch (Exception e) {
 			e.printStackTrace();
 			fail();
+		}
+	}
+
+	@Test
+	public void testMainNoDir() throws IOException {
+		{
+			String[] args = { "-i", "src/test/resources/com/hoge/convcbl/sample01.cbl" };
+			ConvCbl.main(args);
+			// check exist
+			Assert.assertTrue(Files.exists(Paths.get("out/sample01.dmdl")));
+			Assert.assertTrue(Files.exists(Paths.get("out/sample01.dot")));
+		}
+	}
+
+	@Test
+	public void testMainIllegalDir() {
+		{
+			String[] args = { "-i", "src/test/resources/com/hoge/convcbl/sample01.cbl", "-o", "aaa" };
+			try {
+				ConvCbl.main(args);
+			} catch (IllegalArgumentException e) {
+				Assert.assertEquals(MessageFormat.format(Const.MSG_NO_DIR, "aaa"), e.getMessage());
+			} catch (IOException e) {
+				Assert.fail();
+				e.printStackTrace();
+			}
 		}
 	}
 
@@ -149,16 +225,16 @@ public class ConvCblTest {
 	public void testExec00() throws IOException {
 		ProcedureDiv.LONG_LABEL = true;
 		String programId = "sample01";
-		String fileName = PATH + "/" + programId + ".cbl";
-		ConvCbl target = new ConvCbl();
+		Path fileName = Paths.get(PATH + "/" + programId + ".cbl");
+		ConvCbl target = new ConvCbl(fileName);
 		try {
-			target.setOutDir("out");
-			target.exec(fileName);
+			target.setOutDir(Paths.get("out"));
+			target.exec();
 		} catch (Exception e) {
 			e.printStackTrace();
 			fail();
 		}
-		target.getProgram().procDiv.setTreeStruct(true);
+		target.getProgram().procDiv.setForkedMerge(true);
 		target.getProgram().procDiv.outputDataDot(null);
 	}
 
@@ -166,11 +242,11 @@ public class ConvCblTest {
 	public void testExec01() throws IOException {
 		ProcedureDiv.LONG_LABEL = true;
 		String programId = "sample01";
-		String fileName = PATH + "/sample01.cbl";
-		ConvCbl target = new ConvCbl();
+		Path fileName = Paths.get(PATH + "/" + programId + ".cbl");
+		ConvCbl target = new ConvCbl(fileName);
 		try {
-			target.setOutDir("out");
-			target.exec(fileName);
+			target.setOutDir(Paths.get("out"));
+			target.exec();
 
 			Assert.assertEquals("SAMPLE01", target.getProgram().idDiv.getProgramId());
 			Assert.assertEquals(2, target.getProgram().idDiv.recList.size());
@@ -183,7 +259,7 @@ public class ConvCblTest {
 		}
 		outputLog(programId, target);
 		target.getProgram().dataDiv.logoutContent();
-		target.getProgram().procDiv.outputDataDot("out/" + programId + ".dot");
+		target.getProgram().procDiv.outputDataDot(Paths.get("out/" + programId + ".dot"));
 		{
 			// DATA CHEK
 			String expFile = PATH + "/exp_" + programId + ".dmdl";
@@ -205,11 +281,11 @@ public class ConvCblTest {
 	public void testExec02() throws IOException {
 		String programId = "sample02";
 		String PATH = "src/test/resources/com/hoge/convcbl";
-		String fileName = PATH + "/sample02.cbl";
-		ConvCbl target = new ConvCbl();
+		Path fileName = Paths.get(PATH + "/" + programId + ".cbl");
+		ConvCbl target = new ConvCbl(fileName);
 		try {
-			target.setOutDir("out");
-			target.exec(fileName);
+			target.setOutDir(Paths.get("out"));
+			target.exec();
 
 			Assert.assertEquals(2, target.getProgram().idDiv.recList.size());
 			Assert.assertEquals(6, target.getProgram().envDiv.recList.size());
@@ -220,7 +296,7 @@ public class ConvCblTest {
 			fail();
 		}
 		outputLog(programId, target);
-		target.getProgram().procDiv.outputDataDot("out/" + programId + ".dot");
+		target.getProgram().procDiv.outputDataDot(Paths.get("out/" + programId + ".dot"));
 		// DATA CHEK
 		{
 			String expFile = PATH + "/exp_" + programId + ".dmdl";
@@ -242,11 +318,11 @@ public class ConvCblTest {
 	public void testExec03() throws IOException {
 		String programId = "sample03";
 		String PATH = "src/test/resources/com/hoge/convcbl";
-		String fileName = PATH + "/sample03.cbl";
-		ConvCbl target = new ConvCbl();
+		Path fileName = Paths.get(PATH + "/" + programId + ".cbl");
+		ConvCbl target = new ConvCbl(fileName);
 		try {
-			target.setOutDir("out");
-			target.exec(fileName);
+			target.setOutDir(Paths.get("out"));
+			target.exec();
 
 			Assert.assertEquals(2, target.getProgram().idDiv.recList.size());
 			Assert.assertEquals(5, target.getProgram().envDiv.recList.size());
@@ -257,7 +333,7 @@ public class ConvCblTest {
 			fail();
 		}
 		outputLog(programId, target);
-		target.getProgram().procDiv.outputDataDot("out/" + programId + ".dot");
+		target.getProgram().procDiv.outputDataDot(Paths.get("out/" + programId + ".dot"));
 		// DATA CHEK
 		{
 			String expFile = PATH + "/exp_" + programId + ".dmdl";

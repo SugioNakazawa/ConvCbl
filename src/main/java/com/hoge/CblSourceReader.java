@@ -3,7 +3,6 @@ package com.hoge;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,14 +23,14 @@ public class CblSourceReader {
 	static int[] B_AREA = { 11, 73 }; // １２〜７３カラム目
 
 	/** COBOLソースファイルパス **/
-	private String fileName;
+	private Path filePath;
 
 	/**
 	 * 
 	 * @param fileName COBOLソースファイルパス
 	 */
-	public CblSourceReader(String fileName) {
-		this.fileName = fileName;
+	public CblSourceReader(Path filePath) {
+		this.filePath = filePath;
 	}
 
 	/**
@@ -41,15 +40,14 @@ public class CblSourceReader {
 	 * PROCEDURE DIVISIONのみ。ラベルは１行とする。A領域から開始している。<BR>
 	 * 文末のピリオドは外す。単語検索ではピリオドを無視できるように。
 	 * 
-	 * @param fileName ソースパス。
+	 * @param filePath ソースパス。
 	 * @return 実行文のリスト。
 	 * @throws IOException
 	 */
 	public List<String[]> read() throws IOException {
 
 		List<String[]> recList = new ArrayList<String[]>();
-		Path path = Paths.get(fileName);
-		List<String> recListAll = Files.readAllLines(path);
+		List<String> recListAll = Files.readAllLines(filePath);
 		String recBuff = "";
 		boolean inProcedureDiv = false;
 		for (String rec : recListAll) {

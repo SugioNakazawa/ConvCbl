@@ -1,7 +1,8 @@
 package com.hoge;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,14 +21,11 @@ import com.hoge.AsakusaDmdl.DmdlModel;
  */
 public class DataDiv extends BaseDiv {
 	private static Logger logger = LoggerFactory.getLogger(DataDiv.class.getName());
-	// メッセージ
-	static String MSG_NO_SUPPORT = "COPY句ではREPLACING以外はサポートしていません。";
-	static String MSG_NOT_FOUND_COPY = "コピー句 {0} がありません。";
 	//
 	private static final String KEY_FILE = "FILE";
 	private static final String KEY_FD = "FD";
 	private static final String KEY_WORKING_STORAGE = "WORKING-STORAGE";
-	private static final Object KEY_LINKAGE = "LINKAGE";
+	private static final String KEY_LINKAGE = "LINKAGE";
 	/** 01 はレコードを示す **/
 	private static final String KEY_01 = "01";
 	/** COPY 句 **/
@@ -36,8 +34,7 @@ public class DataDiv extends BaseDiv {
 	private static final String KEY_BY = "BY";
 
 	/** COBOLソースのフルパス **/
-	private String filePath;
-	private String fileId;
+	private Path sourcePath;
 	/** FILE SECTION の定義内容 **/
 	private List<FdRec> fdList;
 	/** WORKING-STORAGE SECTION の定義内容 **/
@@ -50,22 +47,12 @@ public class DataDiv extends BaseDiv {
 	 * 
 	 * @param fileId COBOLソースファイルのフルパス。COPY句が同じディレクトrにあると想定。
 	 */
-	public DataDiv(String filePath) {
+	public DataDiv(Path sourcePath) {
 		super();
-		this.filePath = filePath;
-		String[] filePathSplit = filePath.split("/");
-		String tmp = filePathSplit[filePathSplit.length - 1];
-		if (tmp.indexOf(".") > 0) {
-			tmp = tmp.substring(0, tmp.lastIndexOf("."));
-		}
-		this.fileId = tmp;
+		this.sourcePath = sourcePath;
 		this.fdList = new ArrayList<FdRec>();
 		this.wsList = new ArrayList<WsRec>();
 		this.lkList = new ArrayList<LkRec>();
-	}
-
-	public String getFileName() {
-		return fileId;
 	}
 
 	public List<FdRec> getFdList() {
@@ -155,8 +142,8 @@ public class DataDiv extends BaseDiv {
 		}
 	}
 
-	public void createDmdl(String path) throws IOException {
-		AsakusaDmdl target = new AsakusaDmdl(this.fileId);
+	public void createDmdl(Path outFile) throws IOException {
+		AsakusaDmdl target = new AsakusaDmdl();
 		for (FdRec fd : fdList) {
 			DmdlModel model = target.new DmdlModel(fd.recName, fd.recName, "file", "UTF-8");
 			for (FdCol col : fd.getFdColList()) {
@@ -164,7 +151,7 @@ public class DataDiv extends BaseDiv {
 			}
 			target.addModel(model);
 		}
-		target.createDmdl(path);
+		target.createDmdl(outFile);
 	}
 
 	/**
@@ -254,28 +241,35 @@ public class DataDiv extends BaseDiv {
 	/**
 	 * COPY句処理。
 	 * 
-	 * @param string
-	 * @throws IOException
+	 * @param sentence
+	 * @return
 	 */
-	private List<String[]> doCopy(String[] cols) {
-		File dir = new File(filePath);
+	private List<String[]> doCopy(String[] sentence) {
+		String copyFile = sourcePath.toAbsolutePath().getParent() + "/" + sentence[1];
 		try {
-			CblSourceReader reader = new CblSourceReader(dir.getParent() + "/" + cols[1]);
+			CblSourceReader reader = new CblSourceReader(Paths.get(copyFile));
 			List<String[]> retList = reader.read();
-			if (cols.length == 2) {
+			if (sentence.length == 2) {
 				return retList;
-			} else if (KEY_REPLACING.equals(cols[2])) {
-				return replace(retList, cols);
+			} else if (KEY_REPLACING.equals(sentence[2])) {
+				return replace(retList, sentence);
 			}
-			logger.error(MSG_NO_SUPPORT);
-			throw new RuntimeException(MSG_NO_SUPPORT);
+			logger.error(Const.MSG_NO_SUPPORT);
+			throw new RuntimeException(Const.MSG_NO_SUPPORT);
 		} catch (IOException e) {
-			String msg = MessageFormat.format(MSG_NOT_FOUND_COPY, cols[1]);
+			String msg = MessageFormat.format(Const.MSG_NOT_FOUND_COPY, copyFile);
 			logger.error(msg);
 			throw new RuntimeException(msg);
 		}
 	}
 
+	/**
+	 * COPY句内のREPLACE処理
+	 * 
+	 * @param retList
+	 * @param copyRec
+	 * @return
+	 */
 	private List<String[]> replace(List<String[]> retList, String[] copyRec) {
 		String regex = Pattern.quote(copyRec[ComUtil.search(copyRec, KEY_REPLACING) + 1].replaceAll("=", ""));
 		String replacement = copyRec[ComUtil.search(copyRec, KEY_BY) + 1].replaceAll("=", "");

@@ -3,6 +3,7 @@ package com.hoge;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -23,9 +24,9 @@ public class ProcedureDiv extends BaseDiv {
 	/** DOT出力時のノードのラベルに文をすべて出力 **/
 	static boolean LONG_LABEL = true;
 	/** DOT作成時に分岐を展開=true、合流=falseするかを指定する。 **/
-	private boolean isTreeStruct = false;
+	private boolean forkedMerge = true;
 	/** DOT作成時に UNTIL による戻り線を出力する。 **/
-	private boolean isReturnConnector = true;
+	private boolean returnArrow = true;
 	// 予約語
 	private static final String KEY_EVALUATE = "EVALUATE";
 	private static final String KEY_IF = "IF";
@@ -60,7 +61,7 @@ public class ProcedureDiv extends BaseDiv {
 	private static final String KEY_FALSE = "FALSE";
 	private static final String KEY_OTHER = "OTHER";
 	private static final String KEY_TRUE = "TRUE";
-	private static final String KEY_VARYONG = "VARYING";
+	private static final String KEY_VARYING = "VARYING";
 	/** DOTファイルに出力するCmdType。ここに指定したCmdのみを出力する。 **/
 	private static CmdType[] DOT_CMD_FILTER = { CmdType.BRANCH, CmdType.EXEC, CmdType.DEFINE, CmdType.LABEL };
 	/** ソース上にあらわれない場合に作成するコマンド **/
@@ -70,24 +71,12 @@ public class ProcedureDiv extends BaseDiv {
 	private int nestCounter = 1;
 	/** DOTファイルを出力するWriter **/
 	private FileWriter dotFw = null;
-
-	void setTreeStruct(boolean isTreeStruct) {
-		this.isTreeStruct = isTreeStruct;
-	}
-
-	void setReturnConnector(boolean isReturnConnector) {
-		this.isReturnConnector = isReturnConnector;
-	}
-
-	int getNestCounter() {
-		return nestCounter;
-	}
-
-	List<ProcSec> secList;
-	/** Cmdフローの先頭 **/
+	/** ソース内に定義されているセクション **/
+	private List<ProcSec> secList;
+	/** cmdの先頭 **/
 	ExecCmd rootCmd;
-	/** cmdに付与するシーケンス **/
-	public int nodeSeq = 0;
+	/** cmd作成時に付与するシーケンス **/
+	int nodeSeq = 0;
 
 	public ProcedureDiv() {
 		super();
@@ -125,20 +114,18 @@ public class ProcedureDiv extends BaseDiv {
 				}
 			}
 		}
-		// コマンド作成
+		// ノード作成
 		{
 			rootCmd = new ExecCmd(null, recList.get(0), CmdType.LABEL);
 			Deque<String[]> localQue = new ArrayDeque<>();
 			// コマンドリストを作成。分岐なし
 			rootCmd.addNextCmd(createCmd(rootCmd, recList.get(1), localQue, null), "start");
 			// 分岐文を展開。１回目。
+			//	TODO	これなくてもOKかも
 			expandFlatToBranch(rootCmd);
 			// 分岐内分岐。２回目。
 			expandInBranch(rootCmd);
-		}
-		{
-			// set pair for PERFORM SECTION UNTIL
-			// search all cmd. select get(0) if branch.
+			//	PERFORM section UNTIL の戻り線のためのPair設定。
 			setPairPerformUntil(rootCmd, new ArrayDeque<PerformUntilQue>());
 		}
 	}
@@ -175,24 +162,6 @@ public class ProcedureDiv extends BaseDiv {
 	}
 
 	/**
-	 * PERFORM 手続き名 UNTILのpairを見つけるためのキューオブジェクト。
-	 * 
-	 * @author nakazawasugio
-	 *
-	 */
-	class PerformUntilQue {
-		/** 呼び出し側(PERFORM SECTION UNTIL)コマンド **/
-		ExecCmd cmd;
-		/** 呼び出すSECTIONのEXIT文のオブジェクト **/
-		String[] exitSentence;
-
-		PerformUntilQue(ExecCmd cmd, String[] exitSentence) {
-			this.cmd = cmd;
-			this.exitSentence = exitSentence;
-		}
-	}
-
-	/**
 	 * 分岐内のコマンドの拡張（分岐、PERFORMジャンプ）を行う。
 	 * 
 	 * @param cmd
@@ -207,7 +176,7 @@ public class ProcedureDiv extends BaseDiv {
 	}
 
 	/**
-	 * フラット（分岐なし）リストを分岐付きに拡張。
+	 * フラット（分岐なし）リストを分岐付きに拡張。 分岐なしを対象のため常にget(0)を探索。
 	 * 
 	 * @param cmd
 	 */
@@ -216,10 +185,6 @@ public class ProcedureDiv extends BaseDiv {
 			if (cmd.type == CmdType.BRANCH) {
 				ExecCmd endCmd = cmd.nextList.get(0).nextCmd;
 				createExpandBranch(cmd);
-//				ExecCmd prevCmd = cmd.prevCmd;
-//				cmd = createExpandBranch(cmd);
-//				NextCmd repCmd = new NextCmd(cmd, "all");
-//				prevCmd.nextList.set(0, repCmd);
 				cmd = endCmd;
 			} else {
 				cmd = cmd.nextList.get(0).nextCmd;
@@ -730,13 +695,12 @@ public class ProcedureDiv extends BaseDiv {
 	/**
 	 * 処理フロー出力。Graphvizファイル出力。
 	 * 
-	 * @param filePath ファイルパス。nullのときはINFOログへ出力。
+	 * @param outFile DOTファイル。。nullのときはINFOログへ出力。
 	 * @throws IOException
 	 */
-	void outputDataDot(String filePath) throws IOException {
-		if (filePath != null) {
-			File file = new File(filePath);
-			dotFw = new FileWriter(file);
+	void outputDataDot(Path outFile) throws IOException {
+		if (outFile != null) {
+			dotFw = new FileWriter(outFile.toFile());
 		}
 		writeDotRec("strict digraph {");
 		{
@@ -768,7 +732,7 @@ public class ProcedureDiv extends BaseDiv {
 					+ addDotNode(nextValid(cmd.nextList.get(0).nextCmd), branch, que);
 		default:
 			for (NextCmd next : cmd.nextList) {
-				if (isTreeStruct) {
+				if (!forkedMerge) {
 					nestCounter++;
 				}
 				writeDotRelation(cmd, branch, next);
@@ -809,7 +773,7 @@ public class ProcedureDiv extends BaseDiv {
 						+ Integer.toString(branch));
 			}
 		}
-		if (isReturnConnector) {
+		if (returnArrow) {
 			// pairノードがある場合には接続線を出力。
 			if (cmd.getPair() != null) {
 				// 二重に線を出力しないようにEND-PEROMFまたはEXITのときに出力。接続先はスタックから取り出す。
@@ -904,6 +868,18 @@ public class ProcedureDiv extends BaseDiv {
 //				logoutCmdTree(next.nextCmd, prefix + next.condition + "\t", fw);
 			}
 		}
+	}
+
+	void setForkedMerge(boolean forkedMerge) {
+		this.forkedMerge = forkedMerge;
+	}
+
+	void setReturnArrow(boolean returnArrow) {
+		this.returnArrow = returnArrow;
+	}
+
+	int getNestCounter() {
+		return nestCounter;
 	}
 
 	class ExecCmd {
@@ -1025,4 +1001,23 @@ public class ProcedureDiv extends BaseDiv {
 			this.isWrite = isWrite;
 		}
 	}
+
+	/**
+	 * PERFORM 手続き名 UNTILのpairを見つけるためのキューオブジェクト。
+	 * 
+	 * @author nakazawasugio
+	 *
+	 */
+	class PerformUntilQue {
+		/** 呼び出し側(PERFORM SECTION UNTIL)コマンド **/
+		ExecCmd cmd;
+		/** 呼び出すSECTIONのEXIT文のオブジェクト **/
+		String[] exitSentence;
+
+		PerformUntilQue(ExecCmd cmd, String[] exitSentence) {
+			this.cmd = cmd;
+			this.exitSentence = exitSentence;
+		}
+	}
+
 }
